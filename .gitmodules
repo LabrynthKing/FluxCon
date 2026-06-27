@@ -1,0 +1,3 @@
+[submodule "FluxCon.Native/deps/RE-UE4SS"]
+	path = FluxCon.Native/deps/RE-UE4SS
+	url = git@github.com:UE4SS-RE/RE-UE4SS
