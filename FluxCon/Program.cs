@@ -14,12 +14,47 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.IO.Pipes;
+
 namespace FluxCon;
 
 public static class Program
 {
-    private static void Main(string[] args)
+    private static async Task Main(string[] args)
     {
-        Console.WriteLine("Yo Yo Wassup");
+        Console.Title = "FluxCon Logger";
+        Console.WriteLine("Init: Starting Test...");
+
+        const string pipeName = "FluxConLogger";
+
+        while (true)
+        {
+            Console.WriteLine("[System] Waiting for Subnautica 2 to connect...");
+
+            try
+            {
+                using var pipeServer = new NamedPipeServerStream(
+                    pipeName,
+                    PipeDirection.In,
+                    1,
+                    PipeTransmissionMode.Byte,
+                    PipeOptions.Asynchronous
+                );
+
+                await pipeServer.WaitForConnectionAsync();
+                Console.WriteLine("[System] Subnautica 2 Engine Connected Safely!");
+
+                using var reader = new StreamReader(pipeServer);
+
+                string? logLine;
+                while ((logLine = await reader.ReadLineAsync()) != null) Console.WriteLine(logLine);
+            }
+            catch (IOException ex)
+            {
+                Console.WriteLine($"[Error] Pipe connection interrupted: {ex.Message}");
+            }
+
+            Console.WriteLine("[System] Game disconnected.");
+        }
     }
 }
