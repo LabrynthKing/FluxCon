@@ -11,9 +11,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Ignore Warnings
-# add_compile_options("-w")
+add_compile_options("-w")
 
-add_subdirectory(deps)
+add_subdirectory(deps EXCLUDE_FROM_ALL)
 
 set(TARGET FluxCon.Native)
 

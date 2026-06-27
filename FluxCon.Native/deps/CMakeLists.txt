@@ -1,4 +1,4 @@
-add_subdirectory(RE-UE4SS)
+add_subdirectory(RE-UE4SS EXCLUDE_FROM_ALL)
 
 add_library(FluxConDeps INTERFACE)
 
