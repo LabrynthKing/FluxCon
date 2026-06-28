@@ -20,9 +20,16 @@ set(TARGET FluxCon.Native)
 add_library(${TARGET} SHARED
         # Main Files
         src/Flux.cpp
+        src/Handlers/PipeHandler.cpp
+        src/Handlers/LuaHandler.cpp
 
         # Headers
+        src/FluxConAPI_Impl.hpp
         include/FluxCon.h
+        include/Handlers/PipeHandler.hpp
+        include/Handlers/LuaHandler.hpp
+        include/API/FluxCon.hpp
+        src/FluxConAPI_Impl.cpp
 )
 
 target_compile_definitions(${TARGET}

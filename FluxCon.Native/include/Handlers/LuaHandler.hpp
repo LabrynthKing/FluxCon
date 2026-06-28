@@ -16,5 +16,22 @@
 
 #pragma once
 
-#define FluxVersion "0.0.1.1"
-#define W(x) STR(x)
+#include <atomic>
+
+#include <LuaMadeSimple/LuaMadeSimple.hpp>
+
+namespace Flux::Handlers
+{
+    class LuaHandler
+    {
+        inline static std::atomic<bool> m_init{false};
+
+        static void RegisterAll(const std::string& name, const auto& callback, RC::LuaMadeSimple::Lua& main_lua,
+                                RC::LuaMadeSimple::Lua& async_lua, RC::LuaMadeSimple::Lua* hook_lua);
+
+    public:
+        static bool HasInitialized();
+        static void InitLuaAPIs(RC::LuaMadeSimple::Lua& main_lua, RC::LuaMadeSimple::Lua& async_lua,
+                                RC::LuaMadeSimple::Lua* hook_lua);
+    };
+} // namespace Flux::Handlers

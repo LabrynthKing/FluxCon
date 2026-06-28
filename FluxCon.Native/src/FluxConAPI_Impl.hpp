@@ -16,5 +16,16 @@
 
 #pragma once
 
-#define FluxVersion "0.0.1.1"
-#define W(x) STR(x)
+#include "API/FluxCon.hpp"
+
+namespace Flux
+{
+    class FluxConAPI_Impl final : public FluxConAPI
+    {
+    protected:
+        bool IsLoggerInitInternal() override;
+
+    public:
+        static FluxConAPI_Impl* InternalInstance();
+    };
+} // namespace Flux

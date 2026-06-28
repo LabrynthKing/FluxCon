@@ -14,7 +14,22 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#pragma once
+#include "FluxConAPI_Impl.hpp"
 
-#define FluxVersion "0.0.1.1"
-#define W(x) STR(x)
+#include "Handlers/PipeHandler.hpp"
+
+namespace Flux
+{
+    FluxConAPI_Impl* FluxConAPI_Impl::InternalInstance()
+    {
+        static FluxConAPI_Impl inst;
+        return &inst;
+    }
+
+    bool FluxConAPI_Impl::IsLoggerInitInternal() { return Handlers::PipeHandler::HasInitialized(); }
+} // namespace Flux
+
+extern "C"
+{
+    __declspec(dllexport) Flux::FluxConAPI* __cdecl fluxcon_get() { return Flux::FluxConAPI_Impl::InternalInstance(); }
+}

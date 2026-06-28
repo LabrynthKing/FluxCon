@@ -16,14 +16,15 @@
 
 #include <Mod/CppUserModBase.hpp>
 
-#include <thread>
-#include <chrono>
-#include <atomic>
 #include <iostream>
 
 #include <windows.h>
 
+#include <LuaMadeSimple/LuaMadeSimple.hpp>
+
 #include "FluxCon.h"
+#include "Handlers/LuaHandler.hpp"
+#include "Handlers/PipeHandler.hpp"
 
 namespace Flux
 {
@@ -31,85 +32,7 @@ namespace Flux
 
     class FluxCon : public CppUserModBase
     {
-        // Use External Thread For Pipe
-        std::thread m_pipe_worker;
-
-        // This Is So Reloading Mods Doesn't Crash It Cuz Of Weird Thready Thingy
-        std::atomic<bool> m_running{true};
-
-        static void pipe_worker_start(const FluxCon* instance)
-        {
-            const auto pipe_name = R"(\\.\pipe\FluxConLogger)";
-
-            // Check If It's Already Running
-            if (!WaitNamedPipeA(pipe_name, 100))
-            {
-                STARTUPINFOA si{};
-                PROCESS_INFORMATION pi{};
-
-                si.cb = sizeof(si);
-
-                char exe_path[] = R"(.\ue4ss\Mods\FluxCon\FluxCon.exe)";
-                const auto work_dir = R"(.\ue4ss\Mods\FluxCon\)";
-
-                if (CreateProcessA(
-                    exe_path,
-                    nullptr,
-                    nullptr,
-                    nullptr,
-                    FALSE,
-                    CREATE_NEW_CONSOLE,
-                    nullptr,
-                    work_dir,
-                    &si,
-                    &pi
-                ))
-                {
-                    CloseHandle(pi.hProcess);
-                    CloseHandle(pi.hThread);
-                }
-            }
-
-            auto pipe_handle = INVALID_HANDLE_VALUE;
-
-            while (instance->m_running && pipe_handle == INVALID_HANDLE_VALUE)
-            {
-                pipe_handle = CreateFileA(
-                    pipe_name,
-                    GENERIC_WRITE,
-                    0,
-                    nullptr,
-                    OPEN_EXISTING,
-                    0,
-                    nullptr
-                );
-
-                if (pipe_handle == INVALID_HANDLE_VALUE)
-                {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(250));
-                }
-            }
-
-            if (!instance->m_running || pipe_handle == INVALID_HANDLE_VALUE)
-            {
-                if (pipe_handle != INVALID_HANDLE_VALUE) CloseHandle(pipe_handle);
-                return;
-            }
-
-            const auto initialization_msg = "FluxCon Init\n";
-
-            DWORD bytes_written;
-            WriteFile(pipe_handle, initialization_msg, static_cast<DWORD>(strlen(initialization_msg)), &bytes_written,
-                      nullptr);
-
-            while (instance->m_running)
-            {
-                // TODO: Pull Stuff Here
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            }
-
-            CloseHandle(pipe_handle);
-        }
+        Handlers::PipeHandler m_pipe_handler;
 
     public:
         FluxCon()
@@ -120,33 +43,21 @@ namespace Flux
             ModAuthors = STR("LabrynthKing");
         }
 
-        ~FluxCon() override
-        {
-            m_running = false;
+        ~FluxCon() override = default;
 
-            if (m_pipe_worker.joinable())
-            {
-                m_pipe_worker.join();
-            }
-        };
+        auto on_program_start() -> void override { m_pipe_handler.Initialize(); }
 
-        auto on_program_start() -> void override
+        auto on_lua_start(StringViewType mod_name, LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua,
+                          LuaMadeSimple::Lua& async_lua, LuaMadeSimple::Lua* hook_lua) -> void override
         {
-            m_pipe_worker = std::thread(&FluxCon::pipe_worker_start, this);
         }
     };
-}
+} // namespace Flux
 
 #define FLUX_API __declspec(dllexport)
 
-extern "C" {
-FLUX_API CppUserModBase* start_mod()
+extern "C"
 {
-    return new Flux::FluxCon();
-}
-
-FLUX_API void uninstall_mod(const CppUserModBase* mod)
-{
-    delete mod;
-}
+    FLUX_API CppUserModBase* start_mod() { return new Flux::FluxCon(); }
+    FLUX_API void uninstall_mod(const CppUserModBase* mod) { delete mod; }
 }

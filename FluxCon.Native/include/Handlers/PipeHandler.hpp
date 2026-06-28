@@ -16,5 +16,28 @@
 
 #pragma once
 
-#define FluxVersion "0.0.1.1"
-#define W(x) STR(x)
+#include <atomic>
+#include <thread>
+
+namespace Flux::Handlers
+{
+    class PipeHandler
+    {
+        std::thread m_pipe_worker;
+
+        // I. AM. ATOMIC.
+        std::atomic<bool> m_running{true};
+
+        inline static std::atomic<bool> m_init{false};
+
+        void pipe_worker_start() const;
+
+    public:
+        PipeHandler() = default;
+        ~PipeHandler();
+
+        void Initialize();
+
+        static bool HasInitialized();
+    };
+} // namespace Flux::Handlers
