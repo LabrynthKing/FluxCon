@@ -16,5 +16,5 @@
 
 #pragma once
 
-#define FluxVersion "0.0.1.1"
+#define FluxVersion "0.0.1.2"
 #define W(x) STR(x)

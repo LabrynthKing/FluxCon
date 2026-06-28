@@ -20,6 +20,7 @@
 
 #include "Handlers/PipeHandler.hpp"
 
+// TODO: THIS IS SO WRONG FIX THIS
 namespace Flux::Handlers
 {
     using namespace RC::LuaMadeSimple;
@@ -53,7 +54,7 @@ namespace Flux::Handlers
                 }
 
                 lua_State* L = lua_ctx.get_lua_state();
-                lua_pushboolean(L, PipeHandler::HasInitialized());
+                lua_pushboolean(L, PipeHandler::Get().HasInitialized());
                 return 1;
             },
             main_lua, async_lua, hook_lua);

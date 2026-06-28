@@ -14,20 +14,35 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include "FluxConAPI_Impl.hpp"
+#pragma once
+
+#include <cstdint>
 
 namespace Flux
 {
-    FluxConAPI_Impl* FluxConAPI_Impl::InternalInstance()
+    enum class MessageType : uint32_t
     {
-        static FluxConAPI_Impl inst;
-        return &inst;
-    }
+        Init = 1,
+    };
 
-    bool FluxConAPI_Impl::IsLoggerInitInternal() { return false; }
+    struct MessageHeader
+    {
+        uint32_t type;
+        uint32_t length;
+    };
+
+    // Honestly Dk If Some Of These Exist But Oh Well
+    enum class ModType : uint32_t
+    {
+        Lua = 1 << 0,
+        Cpp = 1 << 1,
+        Blueprint = 1 << 2,
+        Pak = 1 << 3,
+
+        // Hybrids
+        LuaCpp = Lua | Cpp,
+        LuaBlueprint = Lua | Blueprint,
+        CppBlueprint = Cpp | Blueprint,
+        LuaCppBlueprint = Lua | Cpp | Blueprint,
+    };
 } // namespace Flux
-
-extern "C"
-{
-    __declspec(dllexport) Flux::FluxConAPI* __cdecl fluxcon_get() { return Flux::FluxConAPI_Impl::InternalInstance(); }
-}

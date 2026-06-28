@@ -32,7 +32,7 @@ namespace Flux
 
     class FluxCon : public CppUserModBase
     {
-        Handlers::PipeHandler m_pipe_handler;
+
 
     public:
         FluxCon()
@@ -45,11 +45,18 @@ namespace Flux
 
         ~FluxCon() override = default;
 
-        auto on_program_start() -> void override { m_pipe_handler.Initialize(); }
-
-        auto on_lua_start(StringViewType mod_name, LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua,
-                          LuaMadeSimple::Lua& async_lua, LuaMadeSimple::Lua* hook_lua) -> void override
+        auto on_program_start() -> void override
         {
+            Handlers::PipeHandler::Get().Initialize();
+
+            // Wait For Pipe Handler To Init
+            while (!Handlers::PipeHandler::Get().HasInitialized())
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            }
+
+            // Send Init Message
+            Handlers::PipeHandler::Get().Send(MessageType::Init, {});
         }
     };
 } // namespace Flux

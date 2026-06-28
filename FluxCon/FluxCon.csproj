@@ -9,12 +9,17 @@
         <InvariantGlobalization>true</InvariantGlobalization>
 
         <PublishSingleFile>true</PublishSingleFile>
-        <PublishTrimmed>true</PublishTrimmed>
 
-        <TrimmerSingleWarn>false</TrimmerSingleWarn>
-        <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
-
-        <Version>0.0.1.0</Version>
+        <Version>0.0.1.2</Version>
+        <Authors>LabrynthKing</Authors>
+        <RepositoryType>git</RepositoryType>
+        <RepositoryUrl>https://github.com/LabrynthKing/FluxCon</RepositoryUrl>
     </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Serilog" Version="4.3.1"/>
+        <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1"/>
+        <PackageReference Include="Serilog.Sinks.File" Version="7.0.0"/>
+    </ItemGroup>
 
 </Project>

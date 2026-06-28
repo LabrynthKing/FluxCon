@@ -17,27 +17,54 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
+#include <cstdint>
+#include <mutex>
+#include <queue>
 #include <thread>
+#include <vector>
+
+#include <windows.h>
+
+#include "Types.hpp"
 
 namespace Flux::Handlers
 {
+    struct OutgoingMessage
+    {
+        MessageType type;
+        std::vector<uint8_t> payload;
+    };
+
     class PipeHandler
     {
         std::thread m_pipe_worker;
-
-        // I. AM. ATOMIC.
         std::atomic<bool> m_running{true};
+        std::atomic<bool> m_init{false};
 
-        inline static std::atomic<bool> m_init{false};
+        std::mutex m_queue_mutex;
+        std::condition_variable m_queue_cv;
+        std::queue<OutgoingMessage> m_outgoing;
 
-        void pipe_worker_start() const;
+        HANDLE m_shutdown_event = nullptr;
+
+        void pipe_worker_start();
+        bool connect_or_launch(HANDLE& pipe_handle) const;
+        bool write_message(HANDLE pipe_handle, const OutgoingMessage& msg) const;
 
     public:
         PipeHandler() = default;
         ~PipeHandler();
 
-        void Initialize();
+        static PipeHandler& Get()
+        {
+            static PipeHandler instance;
+            return instance;
+        }
 
-        static bool HasInitialized();
+        void Initialize();
+        bool HasInitialized() const;
+
+        void Send(MessageType type, std::vector<uint8_t> payload);
     };
 } // namespace Flux::Handlers

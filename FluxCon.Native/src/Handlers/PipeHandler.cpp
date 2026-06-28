@@ -18,74 +18,136 @@
 
 #include <chrono>
 
-#include <windows.h>
-
 namespace Flux::Handlers
 {
-    void PipeHandler::Initialize() { m_pipe_worker = std::thread(&PipeHandler::pipe_worker_start, this); }
+    constexpr auto PIPE_NAME = R"(\\.\pipe\FluxConLogger)";
+
+    void PipeHandler::Initialize()
+    {
+        m_shutdown_event = CreateEventA(nullptr, TRUE, FALSE, nullptr);
+        m_pipe_worker = std::thread(&PipeHandler::pipe_worker_start, this);
+    }
 
     PipeHandler::~PipeHandler()
     {
         m_running = false;
+
+        SetEvent(m_shutdown_event);
+        m_queue_cv.notify_all();
+
         if (m_pipe_worker.joinable())
-        {
             m_pipe_worker.join();
-        }
+
+        CloseHandle(m_shutdown_event);
     }
 
-    bool PipeHandler::HasInitialized() { return m_init.load(); }
+    bool PipeHandler::HasInitialized() const { return m_init.load(); }
 
-    void PipeHandler::pipe_worker_start() const
+    void PipeHandler::Send(const MessageType type, std::vector<uint8_t> payload)
     {
-        const auto pipe_name = R"(\\.\pipe\FluxConLogger)";
+        {
+            std::lock_guard lock(m_queue_mutex);
+            m_outgoing.push(OutgoingMessage{type, std::move(payload)});
+        }
 
-        if (!WaitNamedPipeA(pipe_name, 100))
+        m_queue_cv.notify_one();
+    }
+
+    bool PipeHandler::connect_or_launch(HANDLE& pipe_handle) const
+    {
+        if (!WaitNamedPipeA(PIPE_NAME, 100))
         {
             STARTUPINFOA si{};
             PROCESS_INFORMATION pi{};
             si.cb = sizeof(si);
-
-            char exe_path[] = R"(.\ue4ss\Mods\FluxCon\FluxCon.exe)";
-            const auto work_dir = R"(.\ue4ss\Mods\FluxCon\)";
-
-            if (CreateProcessA(exe_path, nullptr, nullptr, nullptr, FALSE, CREATE_NEW_CONSOLE, nullptr, work_dir, &si,
-                               &pi))
+            constexpr char exe_path[] = R"(.\ue4ss\Mods\FluxCon\FluxCon.exe)";
+            if (const auto work_dir = R"(.\ue4ss\Mods\FluxCon\)"; CreateProcessA(
+                    exe_path, nullptr, nullptr, nullptr, FALSE, CREATE_NEW_CONSOLE, nullptr, work_dir, &si, &pi))
             {
                 CloseHandle(pi.hProcess);
                 CloseHandle(pi.hThread);
             }
         }
 
-        auto pipe_handle = INVALID_HANDLE_VALUE;
+        pipe_handle = INVALID_HANDLE_VALUE;
         while (m_running && pipe_handle == INVALID_HANDLE_VALUE)
         {
-            pipe_handle = CreateFileA(pipe_name, GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
+            pipe_handle =
+                CreateFileA(PIPE_NAME, GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, nullptr);
             if (pipe_handle == INVALID_HANDLE_VALUE)
-            {
                 std::this_thread::sleep_for(std::chrono::milliseconds(250));
-            }
         }
+        return pipe_handle != INVALID_HANDLE_VALUE;
+    }
 
-        if (!m_running || pipe_handle == INVALID_HANDLE_VALUE)
+    bool PipeHandler::write_message(const HANDLE pipe_handle, const OutgoingMessage& msg) const
+    {
+        const MessageHeader header{static_cast<uint32_t>(msg.type), static_cast<uint32_t>(msg.payload.size())};
+
+        std::vector<uint8_t> frame(sizeof(header) + msg.payload.size());
+
+        memcpy(frame.data(), &header, sizeof(header));
+        if (!msg.payload.empty())
+            memcpy(frame.data() + sizeof(header), msg.payload.data(), msg.payload.size());
+
+        OVERLAPPED ov{};
+
+        ov.hEvent = CreateEventA(nullptr, TRUE, FALSE, nullptr);
+
+        if (const BOOL ok = WriteFile(pipe_handle, frame.data(), static_cast<DWORD>(frame.size()), nullptr, &ov);
+            !ok && GetLastError() != ERROR_IO_PENDING)
         {
-            if (pipe_handle != INVALID_HANDLE_VALUE)
-                CloseHandle(pipe_handle);
-            return;
+            CloseHandle(ov.hEvent);
+            return false;
         }
 
-        const auto initialization_msg = "FluxCon Init\n";
-        DWORD bytes_written;
-        WriteFile(pipe_handle, initialization_msg, static_cast<DWORD>(strlen(initialization_msg)), &bytes_written,
-                  nullptr);
+        const HANDLE waitHandles[2] = {ov.hEvent, m_shutdown_event};
+        const DWORD wait = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
 
-        m_init = true;
+        bool success = false;
+        if (wait == WAIT_OBJECT_0)
+        {
+            DWORD bytes_written = 0;
+            success = GetOverlappedResult(pipe_handle, &ov, &bytes_written, FALSE) && bytes_written == frame.size();
+        }
+        else
+        {
+            CancelIoEx(pipe_handle, &ov);
+        }
 
+        CloseHandle(ov.hEvent);
+        return success;
+    }
+
+    void PipeHandler::pipe_worker_start()
+    {
         while (m_running)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
+            auto pipe_handle = INVALID_HANDLE_VALUE;
+            if (!connect_or_launch(pipe_handle))
+                break;
 
-        m_init = false;
-        CloseHandle(pipe_handle);
+            m_init = true;
+
+            bool pipe_alive = true;
+            while (m_running && pipe_alive)
+            {
+                OutgoingMessage msg;
+                {
+                    std::unique_lock lock(m_queue_mutex);
+                    m_queue_cv.wait(lock, [this] { return !m_running || !m_outgoing.empty(); });
+                    if (!m_running)
+                        break;
+                    msg = std::move(m_outgoing.front());
+                    m_outgoing.pop();
+                }
+
+                if (!write_message(pipe_handle, msg))
+                    pipe_alive = false;
+            }
+
+            m_init = false;
+            CloseHandle(pipe_handle);
+        }
     }
 } // namespace Flux::Handlers

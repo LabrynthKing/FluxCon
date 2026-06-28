@@ -14,20 +14,34 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include "FluxConAPI_Impl.hpp"
+#pragma once
+
+#include <cstdint>
+#include <string>
+#include <vector>
 
 namespace Flux
 {
-    FluxConAPI_Impl* FluxConAPI_Impl::InternalInstance()
+    // Basic Ahh Binary Writer
+    class ByteWriter
     {
-        static FluxConAPI_Impl inst;
-        return &inst;
-    }
+    public:
+        std::vector<uint8_t> buffer;
 
-    bool FluxConAPI_Impl::IsLoggerInitInternal() { return false; }
+        void WriteU32(const uint32_t v) { append(&v, sizeof(v)); }
+        void WriteU8(const uint8_t v) { append(&v, sizeof(v)); }
+        void WriteBool(const bool v) { WriteU8(v ? 1 : 0); }
+        void WriteString(const std::string& s)
+        {
+            WriteU32(static_cast<uint32_t>(s.size()));
+            append(s.data(), s.size());
+        }
+
+    private:
+        void append(const void* data, const size_t len)
+        {
+            const auto* p = static_cast<const uint8_t*>(data);
+            buffer.insert(buffer.end(), p, p + len);
+        }
+    };
 } // namespace Flux
-
-extern "C"
-{
-    __declspec(dllexport) Flux::FluxConAPI* __cdecl fluxcon_get() { return Flux::FluxConAPI_Impl::InternalInstance(); }
-}

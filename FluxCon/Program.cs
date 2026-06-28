@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using System.IO.Pipes;
+using FluxCon.Handlers;
+using FluxCon.Types;
+using FluxCon.Utils;
 
 namespace FluxCon;
 
@@ -22,39 +24,57 @@ public static class Program
 {
     private static async Task Main(string[] args)
     {
-        Console.Title = "FluxCon Logger";
-        Console.WriteLine("Init: Starting Test...");
+        VLog.Info("FluxCon Version 0.0.1.2 Initializing...", true);
 
-        const string pipeName = "FluxConLogger";
+        VLog.Verbose("Starting Pipe Listener...", true);
+        var pipeHandler = new PipeHandler();
 
-        while (true)
+        pipeHandler.Start();
+
+        VLog.Debug("Pipe Listener Initialized", true);
+
+        pipeHandler.OnInit += _ =>
         {
-            Console.WriteLine("[System] Waiting for Subnautica 2 to connect...");
+            ModsChecker.GetAllMods();
 
-            try
+            var totalCount = ModsChecker.AllMods.Count;
+            var enabledCount = ModsChecker.AllMods.Count(m => m.EnabledInfo != EnabledInfo.Disabled);
+
+            VLog.Info($"Found {ModsChecker.AllMods.Count} Mods");
+            VLog.Info($"Enabled: {enabledCount} | Disabled: {totalCount - enabledCount}");
+
+            // OMG FORMATTING PRO
+            VLog.Info("======================== BEGIN MOD LIST ========================");
+            var count = 1;
+            foreach (var mod in ModsChecker.AllMods)
             {
-                using var pipeServer = new NamedPipeServerStream(
-                    pipeName,
-                    PipeDirection.In,
-                    1,
-                    PipeTransmissionMode.Byte,
-                    PipeOptions.Asynchronous
-                );
-
-                await pipeServer.WaitForConnectionAsync();
-                Console.WriteLine("[System] Subnautica 2 Engine Connected Safely!");
-
-                using var reader = new StreamReader(pipeServer);
-
-                string? logLine;
-                while ((logLine = await reader.ReadLineAsync()) != null) Console.WriteLine(logLine);
-            }
-            catch (IOException ex)
-            {
-                Console.WriteLine($"[Error] Pipe connection interrupted: {ex.Message}");
+                VLog.Info(
+                    mod.LoadOrder is not null
+                        ? $"Mod {count} => {mod.Name} ({LogUtils.ModTypeToString(mod.Type)}) | {LogUtils.EnabledInfoToString(mod.EnabledInfo)} | Load Order: {mod.LoadOrder}"
+                        : $"Mod {count} => {mod.Name} ({LogUtils.ModTypeToString(mod.Type)}) | {LogUtils.EnabledInfoToString(mod.EnabledInfo)}");
+                count++;
             }
 
-            Console.WriteLine("[System] Game disconnected.");
-        }
+            VLog.Info("========================= END MOD LIST ==========================");
+        };
+
+        pipeHandler.OnError += exception => { VLog.Error("Pipe Listener Error", true, exception); };
+
+        VLog.Info("FluxCon Version 0.0.1.2 Initialized");
+
+        var shutdownTcs = new TaskCompletionSource();
+
+        Console.CancelKeyPress += (_, e) =>
+        {
+            e.Cancel = true;
+            shutdownTcs.TrySetResult();
+        };
+
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => shutdownTcs.TrySetResult();
+
+        await shutdownTcs.Task;
+
+        VLog.Info("Shutting Down FluxCon...");
+        await pipeHandler.DisposeAsync();
     }
 }
