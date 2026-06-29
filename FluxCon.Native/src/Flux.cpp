@@ -23,6 +23,7 @@
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 
 #include "FluxCon.h"
+#include "Handlers/LuaHandler.hpp"
 #include "Init.hpp"
 
 namespace Flux
@@ -49,6 +50,12 @@ namespace Flux
 
             Init::InitEverything();
             Output::send<LogLevel::Normal>(STR("FluxCon Initialized"));
+        }
+
+        auto on_lua_start(const StringViewType mod_name, LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua,
+                          LuaMadeSimple::Lua& async_lua, LuaMadeSimple::Lua* hook_lua) -> void override
+        {
+            Handlers::LuaHandler::RegisterLua(lua);
         }
     };
 } // namespace Flux

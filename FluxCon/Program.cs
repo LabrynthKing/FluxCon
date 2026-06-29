@@ -22,55 +22,42 @@ namespace FluxCon;
 
 public static class Program
 {
+    private const string Version = "0.0.1.4";
+
+    public static VLog Logger = null!;
+
     private static ModHandler _modHandler = new();
+
+    private static readonly ModInfo FluxConModInfo = new()
+    {
+        Name = "FluxCon",
+        DisplayName = "FluxCon",
+        Type = ModType.Cpp, // Technically C++ + C# But Eh
+        Version = Version,
+        Author = "LabrynthKing",
+        GitHubLink = "https://github.com/LabrynthKing/FluxCon",
+        NexusLink = null,
+        Dependencies = []
+    };
 
     private static async Task Main(string[] args)
     {
-        VLog.Info("FluxCon Version 0.0.1.2 Initializing...", true);
+        // Init Logger First
+        Logger = new VLog(FluxConModInfo);
 
-        VLog.Verbose("Starting Pipe Listener...", true);
+        Logger.Info($"FluxCon Version {Version} Initializing...");
+
+        Logger.Verbose("Starting Pipe Listener...");
         var pipeHandler = new PipeHandler();
 
         pipeHandler.Start();
+        RegisterPipeHandlerActions(pipeHandler);
 
-        VLog.Debug("Pipe Listener Initialized", true);
+        Logger.Debug("Pipe Listener Initialized");
 
-        pipeHandler.OnInit += _ =>
-        {
-            ModsChecker.GetAllMods();
+        Logger.Info($"FluxCon Version {Version} Initialized");
 
-            var totalCount = ModsChecker.AllMods.Count;
-            var enabledCount = ModsChecker.AllMods.Count(m => m.EnabledInfo != EnabledInfo.Disabled);
-
-            VLog.Info($"Found {ModsChecker.AllMods.Count} Mods");
-            VLog.Info($"Enabled: {enabledCount} | Disabled: {totalCount - enabledCount}");
-
-            // OMG FORMATTING PRO
-            VLog.Info("======================== BEGIN MOD LIST ========================");
-            var count = 1;
-            foreach (var mod in ModsChecker.AllMods)
-            {
-                VLog.Info(
-                    mod.LoadOrder is not null
-                        ? $"Mod {count} => {mod.Name} ({LogUtils.ModTypeToString(mod.Type)}) | {LogUtils.EnabledInfoToString(mod.EnabledInfo)} | Load Order: {mod.LoadOrder}"
-                        : $"Mod {count} => {mod.Name} ({LogUtils.ModTypeToString(mod.Type)}) | {LogUtils.EnabledInfoToString(mod.EnabledInfo)}");
-                count++;
-            }
-
-            VLog.Info("========================= END MOD LIST ==========================");
-
-            // Create New ModHandler Instance
-            _modHandler = new ModHandler();
-        };
-
-        pipeHandler.OnRegister += registration => { _modHandler.RegisterMod(registration.ModInfo); };
-
-        pipeHandler.OnUnRegister += unregister => { _modHandler.UnRegisterMod(unregister.ModId); };
-
-        pipeHandler.OnError += exception => { VLog.Error("Pipe Listener Error", true, exception); };
-
-        VLog.Info("FluxCon Version 0.0.1.2 Initialized");
-
+        // The Below Is Weird
         var shutdownTcs = new TaskCompletionSource();
 
         Console.CancelKeyPress += (_, e) =>
@@ -83,7 +70,44 @@ public static class Program
 
         await shutdownTcs.Task;
 
-        VLog.Info("Shutting Down FluxCon...");
+        Logger.Info("Shutting Down FluxCon...");
         await pipeHandler.DisposeAsync();
+    }
+
+    private static void RegisterPipeHandlerActions(PipeHandler pipeHandler)
+    {
+        pipeHandler.OnInit += _ =>
+        {
+            ModsChecker.GetAllMods();
+
+            var totalCount = ModsChecker.AllMods.Count;
+            var enabledCount = ModsChecker.AllMods.Count(m => m.EnabledInfo != EnabledInfo.Disabled);
+
+            Logger.Info($"Found {ModsChecker.AllMods.Count} Mods");
+            Logger.Info($"Enabled: {enabledCount} | Disabled: {totalCount - enabledCount}");
+
+            // OMG FORMATTING PRO
+            Logger.Info("======================== BEGIN MOD LIST ========================");
+            var count = 1;
+            foreach (var mod in ModsChecker.AllMods)
+            {
+                Logger.Info(
+                    mod.LoadOrder is not null
+                        ? $"Mod {count} => {mod.Name} ({LogUtils.ModTypeToString(mod.Type)}) | {LogUtils.EnabledInfoToString(mod.EnabledInfo)} | Load Order: {mod.LoadOrder}"
+                        : $"Mod {count} => {mod.Name} ({LogUtils.ModTypeToString(mod.Type)}) | {LogUtils.EnabledInfoToString(mod.EnabledInfo)}");
+                count++;
+            }
+
+            Logger.Info("========================= END MOD LIST ==========================");
+
+            // Create New ModHandler Instance
+            _modHandler = new ModHandler();
+        };
+
+        pipeHandler.OnRegister += registration => { _modHandler.RegisterMod(registration.ModInfo); };
+
+        pipeHandler.OnUnRegister += unregister => { _modHandler.UnRegisterMod(unregister.ModId); };
+
+        pipeHandler.OnError += exception => { Logger.Error(exception, "Pipe Listener Error"); };
     }
 }

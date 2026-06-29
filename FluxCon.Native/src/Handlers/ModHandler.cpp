@@ -27,6 +27,7 @@ namespace Flux::Handlers
         ByteWriter w;
 
         w.WriteString(info.name);
+        w.WriteString(info.displayName);
         w.WriteU32(static_cast<uint32_t>(info.type));
         w.WriteString(info.author);
         w.WriteString(info.version);

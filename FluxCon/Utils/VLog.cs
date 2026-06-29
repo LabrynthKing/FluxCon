@@ -14,18 +14,40 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using FluxCon.Handlers;
+using FluxCon.Types;
 using Serilog;
-
-#pragma warning disable CA2254
+using Serilog.Events;
 
 namespace FluxCon.Utils;
 
-internal static class VLog
+public class VLog : IDisposable, IAsyncDisposable
 {
+    private readonly uint _modId;
+    private readonly string _modName;
+
+    public readonly ModInfo ModInfo;
+
+    private bool _disposed; // I WILL DISPOSE YOU MUAHAHAH JK
+
     static VLog()
     {
-        if (File.Exists("FluxCon.log")) File.Delete("FluxCon.log");
+        try
+        {
+            var logFile = Path.Combine(ModsChecker.Win64Dir, "FluxCon.log");
 
+            // Delete Older File
+            // TODO: Add A Config To Not Do This
+            if (File.Exists(logFile)) File.Delete(logFile);
+        }
+        catch
+        {
+            // Shouldn't Happen Unless OS Blocks It I Think
+            Console.WriteLine("Error Deleting FluxCon.log!!");
+        }
+
+        // Setup Config
+        // TODO: Add Configuration Options For This Too
         var config = new LoggerConfiguration()
 #if DEBUG
             .MinimumLevel.Verbose()
@@ -34,41 +56,164 @@ internal static class VLog
 #endif
             .Enrich.FromLogContext()
             .WriteTo.Console(
-                outputTemplate: "[{Timestamp:HH:mm:ss}] [{Level:u3}] [{Thing}] {Message:lj}{NewLine}{Exception}")
+                outputTemplate: "[{Timestamp:HH:mm:ss}] [{Level:u3}] [{ModLabel}] {Message:lj}{NewLine}{Exception}")
             .WriteTo.File("FluxCon.log",
-                outputTemplate: "[{Timestamp:HH:mm:ss}] [{Level:u3}] [{Thing}] {Message:lj}{NewLine}{Exception}");
+                outputTemplate: "[{Timestamp:HH:mm:ss}] [{Level:u3}] [{ModLabel}] {Message:lj}{NewLine}{Exception}");
 
         Log.Logger = config.CreateLogger();
     }
 
-
-    public static void Info(string message, bool init = false, Exception? ex = null)
+    public VLog(ModInfo modInfo)
     {
-        Log.ForContext("Thing", init ? "Init" : "FluxCon").Information(ex, message);
+        ModInfo = modInfo;
+        _modId = ModInfo.ModId;
+        _modName = ModInfo.DisplayName;
     }
 
-    public static void Debug(string message, bool init = false, Exception? ex = null)
+    public ValueTask DisposeAsync()
     {
-        Log.ForContext("Thing", init ? "Init" : "FluxCon").Debug(ex, message);
+        _disposed = true;
+        GC.SuppressFinalize(this);
+        return ValueTask.CompletedTask;
     }
 
-    public static void Verbose(string message, bool init = false, Exception? ex = null)
+    public void Dispose()
     {
-        Log.ForContext("Thing", init ? "Init" : "FluxCon").Verbose(ex, message);
+        _disposed = true;
+        GC.SuppressFinalize(this);
     }
 
-    public static void Warn(string message, bool init = false, Exception? ex = null)
+    private void WriteLog(LogEventLevel level, Exception? ex, string message, params object[] args)
     {
-        Log.ForContext("Thing", init ? "Init" : "FluxCon").Warning(ex, message);
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(VLog),
+                $"Cannot Log Via '{_modName}' Because The Mod Has Been UnRegistered!.");
+
+        var context = Log.ForContext("ModLabel", _modName);
+        if (ex is null)
+            context.Write(level, message, args);
+        else
+            context.Write(level, ex, message, args);
     }
 
-    public static void Error(string message, bool init = false, Exception? ex = null)
+    // Oh God Time To Type All This Shi
+    public void Info(string message)
     {
-        Log.ForContext("Thing", init ? "Init" : "FluxCon").Error(ex, message);
+        WriteLog(LogEventLevel.Information, null, message);
     }
 
-    public static void Fatal(string message, bool init = false, Exception? ex = null)
+    public void Info(string message, params object[] args)
     {
-        Log.ForContext("Thing", init ? "Init" : "FluxCon").Fatal(ex, message);
+        WriteLog(LogEventLevel.Information, null, message, args);
+    }
+
+    public void Info(Exception? ex, string message)
+    {
+        WriteLog(LogEventLevel.Information, ex, message);
+    }
+
+    public void Info(Exception? ex, string message, params object[] args)
+    {
+        WriteLog(LogEventLevel.Information, ex, message, args);
+    }
+
+    public void Debug(string message)
+    {
+        WriteLog(LogEventLevel.Debug, null, message);
+    }
+
+    public void Debug(string message, params object[] args)
+    {
+        WriteLog(LogEventLevel.Debug, null, message, args);
+    }
+
+    public void Debug(Exception? ex, string message)
+    {
+        WriteLog(LogEventLevel.Debug, ex, message);
+    }
+
+    public void Debug(Exception? ex, string message, params object[] args)
+    {
+        WriteLog(LogEventLevel.Debug, ex, message, args);
+    }
+
+    public void Verbose(string message)
+    {
+        WriteLog(LogEventLevel.Verbose, null, message);
+    }
+
+    public void Verbose(string message, params object[] args)
+    {
+        WriteLog(LogEventLevel.Verbose, null, message, args);
+    }
+
+    public void Verbose(Exception? ex, string message)
+    {
+        WriteLog(LogEventLevel.Verbose, ex, message);
+    }
+
+    public void Verbose(Exception? ex, string message, params object[] args)
+    {
+        WriteLog(LogEventLevel.Verbose, ex, message, args);
+    }
+
+    public void Warn(string message)
+    {
+        WriteLog(LogEventLevel.Warning, null, message);
+    }
+
+    public void Warn(string message, params object[] args)
+    {
+        WriteLog(LogEventLevel.Warning, null, message, args);
+    }
+
+    public void Warn(Exception? ex, string message)
+    {
+        WriteLog(LogEventLevel.Warning, ex, message);
+    }
+
+    public void Warn(Exception? ex, string message, params object[] args)
+    {
+        WriteLog(LogEventLevel.Warning, ex, message, args);
+    }
+
+    public void Error(string message)
+    {
+        WriteLog(LogEventLevel.Error, null, message);
+    }
+
+    public void Error(string message, params object[] args)
+    {
+        WriteLog(LogEventLevel.Error, null, message, args);
+    }
+
+    public void Error(Exception? ex, string message)
+    {
+        WriteLog(LogEventLevel.Error, ex, message);
+    }
+
+    public void Error(Exception? ex, string message, params object[] args)
+    {
+        WriteLog(LogEventLevel.Error, ex, message, args);
+    }
+
+    public void Fatal(string message)
+    {
+        WriteLog(LogEventLevel.Fatal, null, message);
+    }
+
+    public void Fatal(string message, params object[] args)
+    {
+        WriteLog(LogEventLevel.Fatal, null, message, args);
+    }
+
+    public void Fatal(Exception? ex, string message)
+    {
+        WriteLog(LogEventLevel.Fatal, ex, message);
+    }
+
+    public void Fatal(Exception? ex, string message, params object[] args)
+    {
+        WriteLog(LogEventLevel.Fatal, ex, message, args);
     }
 }

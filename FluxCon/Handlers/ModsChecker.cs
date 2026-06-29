@@ -27,6 +27,9 @@ internal static class ModsChecker
     // FluxCon -> Mods
     private static readonly string ModsDir = Path.GetFullPath(Path.Combine(AppDir, ".."));
 
+    // Mods -> ue4ss -> Win64
+    public static readonly string Win64Dir = Path.GetFullPath(Path.Combine(ModsDir, "..", ".."));
+
     public static ImmutableList<ModInfoSimple> AllMods { get; private set; } = [];
 
     public static void GetAllMods()
@@ -59,8 +62,8 @@ internal static class ModsChecker
                     type |= ModType.Cpp;
 
                 // Check BP
-                // Mods -> ue4ss -> Win64 -> Binaries
-                var bpPakPath = Path.Combine(ModsDir, "..", "..", "..", "Content", "Paks", "LogicMods", modName,
+                // Win64 -> Binaries -> Subnautica2
+                var bpPakPath = Path.Combine(Win64Dir, "..", "..", "Content", "Paks", "LogicMods", modName,
                     $"{modName}.pak");
                 if (File.Exists(Path.GetFullPath(bpPakPath)))
                     type |= ModType.Blueprint;

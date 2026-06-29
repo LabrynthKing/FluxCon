@@ -10,7 +10,7 @@
 
         <PublishSingleFile>true</PublishSingleFile>
 
-        <Version>0.0.1.2</Version>
+        <Version>0.0.1.4</Version>
         <Authors>LabrynthKing</Authors>
         <RepositoryType>git</RepositoryType>
         <RepositoryUrl>https://github.com/LabrynthKing/FluxCon</RepositoryUrl>

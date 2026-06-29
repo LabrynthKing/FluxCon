@@ -14,25 +14,41 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Concurrent;
 using FluxCon.Types;
 using FluxCon.Utils;
+using static FluxCon.Program;
 
 namespace FluxCon.Handlers;
 
 internal class ModHandler
 {
-    public Dictionary<uint, ModInfo> Mods = new();
+    private readonly ConcurrentDictionary<uint, VLog> _loggers = new();
+    public ConcurrentDictionary<uint, ModInfo> Mods = new();
 
     public void RegisterMod(ModInfo mod)
     {
         Mods[mod.ModId] = mod;
 
-        VLog.Info($"Registered Mod: {mod.Name} {mod.Version} ({LogUtils.ModTypeToString(mod.Type)})");
+        Logger.Info("Registered Mod: {0} {1} ({2}) -> ID: {3}", mod.DisplayName, mod.Version,
+            LogUtils.ModTypeToString(mod.Type), mod.ModId);
+
+        // Register Logger And Save (Weird Ahh Syntax)
+        _loggers.GetOrAdd(mod.ModId, static (_, m) => new VLog(m), mod);
     }
 
     public void UnRegisterMod(uint modId)
     {
         if (Mods.Remove(modId, out var mod))
-            VLog.Info($"UnRegistered Mod: {mod.Name} {mod.Version} ({LogUtils.ModTypeToString(mod.Type)})");
+            Logger.Info("UnRegistered Mod: {0} {1} ({2}) -> ID: {3}", mod.DisplayName, mod.Version,
+                LogUtils.ModTypeToString(mod.Type), modId);
+
+        if (_loggers.TryRemove(modId, out var logger)) logger.Dispose();
+    }
+
+    public VLog? GetLogger(uint modId)
+    {
+        // ReSharper disable once CanSimplifyDictionaryTryGetValueWithGetValueOrDefault
+        return _loggers.TryGetValue(modId, out var logger) ? logger : null;
     }
 }

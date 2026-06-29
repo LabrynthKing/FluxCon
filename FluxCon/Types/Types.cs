@@ -51,13 +51,14 @@ internal enum EnabledInfo : uint
 
 internal readonly record struct ModInfoSimple(string Name, ModType Type, EnabledInfo EnabledInfo, uint? LoadOrder);
 
-public struct ModInfo(string name, ModType type, string author, string version)
+public struct ModInfo(string name, string displayName, ModType type, string author, string version)
 {
     // Use Hash For ModID, Why? IDK I Just Wanna
     public readonly uint ModId = HashUtils.GetFNV1aHash(name);
 
     // Basic Stuff
     public string Name = name;
+    public string DisplayName = displayName;
     public ModType Type = type;
     public string Author = author;
     public string Version = version;

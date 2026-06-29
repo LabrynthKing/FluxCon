@@ -17,8 +17,6 @@
 
 #include "Init.hpp"
 
-#include <thread>
-
 #include <DynamicOutput/DynamicOutput.hpp>
 
 #include "Handlers/PipeHandler.hpp"

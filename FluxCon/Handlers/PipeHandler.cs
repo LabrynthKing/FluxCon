@@ -17,7 +17,7 @@
 using System.IO.Pipes;
 using System.Text;
 using FluxCon.Types;
-using FluxCon.Utils;
+using static FluxCon.Program;
 
 namespace FluxCon.Handlers;
 
@@ -69,23 +69,24 @@ internal sealed class PipeHandler : IAsyncDisposable
                 _pipeServer = new NamedPipeServerStream(PipeName, PipeDirection.In, 1, PipeTransmissionMode.Byte,
                     PipeOptions.Asynchronous);
 
-                VLog.Verbose("Waiting For Pipe Connection...", true);
+                Logger.Verbose("Waiting For Pipe Connection...");
                 await _pipeServer.WaitForConnectionAsync(ct);
-                VLog.Debug("Pipe Client Connected", true);
+                Logger.Debug("Pipe Client Connected");
                 await ReadLoopAsync(_pipeServer, ct);
             }
             catch (OperationCanceledException)
             {
-                VLog.Debug("Pipe Listener Cancelled; Shutting Down", true);
+                Logger.Debug("Pipe Listener Cancelled; Shutting Down");
                 break;
             }
             catch (IOException ex)
             {
-                VLog.Warn($"Pipe Disconnected: {ex.Message}", true);
+                Logger.Warn(ex, "Pipe Disconnected");
                 OnError?.Invoke(ex);
             }
             catch (Exception ex)
             {
+                Logger.Error(ex, "Pipe Error");
                 OnError?.Invoke(ex);
             }
             finally
@@ -107,7 +108,7 @@ internal sealed class PipeHandler : IAsyncDisposable
         {
             if (!await ReadExactAsync(pipe, headerBuf, 8, ct))
             {
-                VLog.Debug("Pipe Closed By Client");
+                Logger.Debug("Pipe Closed By Client");
                 return; // Pipe Closed
             }
 
@@ -118,7 +119,7 @@ internal sealed class PipeHandler : IAsyncDisposable
 
             if (length > 0 && !await ReadExactAsync(pipe, payload, (int)length, ct))
             {
-                VLog.Debug("Pipe Closed By Client Mid-Message");
+                Logger.Debug("Pipe Closed By Client Mid-Message");
                 return;
             }
 
@@ -147,17 +148,17 @@ internal sealed class PipeHandler : IAsyncDisposable
             switch (type)
             {
                 case MessageType.Init:
-                    VLog.Verbose("Received Init Message", true);
+                    Logger.Verbose("Received Init Message");
                     OnInit?.Invoke(new Init());
                     break;
 
                 case MessageType.Register:
-                    VLog.Verbose("Received Mod Registration Message");
+                    Logger.Verbose("Received Mod Registration Message");
                     OnRegister?.Invoke(DeserializeModRegistration(payload));
                     break;
 
                 case MessageType.UnRegister:
-                    VLog.Verbose("Received Mod UnRegistration Message");
+                    Logger.Verbose("Received Mod UnRegistration Message");
                     OnUnRegister?.Invoke(DeserializeModUnRegistration(payload));
                     break;
 
@@ -168,7 +169,7 @@ internal sealed class PipeHandler : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            VLog.Error($"Dispatch Failed For {type}");
+            Logger.Error($"Dispatch Failed For {type}");
             OnError?.Invoke(ex);
         }
     }
@@ -213,6 +214,7 @@ internal sealed class PipeHandler : IAsyncDisposable
         var offset = 0;
 
         var name = ReadString(payload, ref offset);
+        var displayName = ReadString(payload, ref offset);
         var modType = (ModType)ReadUInt32(payload, ref offset);
         var author = ReadString(payload, ref offset);
         var version = ReadString(payload, ref offset);
@@ -220,7 +222,7 @@ internal sealed class PipeHandler : IAsyncDisposable
         var gitHubLink = ReadOptionalString(payload, ref offset);
         var dependencies = ReadStringList(payload, ref offset);
 
-        var info = new ModInfo(name, modType, author, version)
+        var info = new ModInfo(name, displayName, modType, author, version)
         {
             NexusLink = nexusLink,
             GitHubLink = gitHubLink,
