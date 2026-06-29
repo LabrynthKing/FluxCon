@@ -23,6 +23,8 @@ namespace Flux
     enum class MessageType : uint32_t
     {
         Init = 1,
+        Register = 2,
+        UnRegister = 3,
     };
 
     struct MessageHeader
@@ -31,18 +33,12 @@ namespace Flux
         uint32_t length;
     };
 
-    // Honestly Dk If Some Of These Exist But Oh Well
-    enum class ModType : uint32_t
+    enum class PipeState : uint8_t
     {
-        Lua = 1 << 0,
-        Cpp = 1 << 1,
-        Blueprint = 1 << 2,
-        Pak = 1 << 3,
-
-        // Hybrids
-        LuaCpp = Lua | Cpp,
-        LuaBlueprint = Lua | Blueprint,
-        CppBlueprint = Cpp | Blueprint,
-        LuaCppBlueprint = Lua | Cpp | Blueprint,
+        NotStarted = 0,
+        Connecting = 1,
+        Connected = 2,
+        Reconnecting = 3,
+        ShuttingDown = 4,
     };
 } // namespace Flux

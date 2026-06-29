@@ -23,8 +23,7 @@
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 
 #include "FluxCon.h"
-#include "Handlers/LuaHandler.hpp"
-#include "Handlers/PipeHandler.hpp"
+#include "Init.hpp"
 
 namespace Flux
 {
@@ -32,7 +31,6 @@ namespace Flux
 
     class FluxCon : public CppUserModBase
     {
-
 
     public:
         FluxCon()
@@ -47,16 +45,10 @@ namespace Flux
 
         auto on_program_start() -> void override
         {
-            Handlers::PipeHandler::Get().Initialize();
+            Output::send<LogLevel::Normal>(STR("Initializing FluxCon"));
 
-            // Wait For Pipe Handler To Init
-            while (!Handlers::PipeHandler::Get().HasInitialized())
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(300));
-            }
-
-            // Send Init Message
-            Handlers::PipeHandler::Get().Send(MessageType::Init, {});
+            Init::InitEverything();
+            Output::send<LogLevel::Normal>(STR("FluxCon Initialized"));
         }
     };
 } // namespace Flux

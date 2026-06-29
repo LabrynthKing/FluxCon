@@ -17,3 +17,7 @@
 namespace FluxCon.Types;
 
 public record Init;
+
+public record ModRegistration(ModInfo ModInfo);
+
+public record ModUnRegistration(uint ModId);

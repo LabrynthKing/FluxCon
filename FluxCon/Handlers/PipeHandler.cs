@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.IO.Pipes;
+using System.Text;
 using FluxCon.Types;
 using FluxCon.Utils;
 
@@ -47,6 +48,10 @@ internal sealed class PipeHandler : IAsyncDisposable
     }
 
     public event Action<Init>? OnInit;
+
+    public event Action<ModRegistration>? OnRegister;
+
+    public event Action<ModUnRegistration>? OnUnRegister;
 
     public event Action<Exception>? OnError;
 
@@ -146,6 +151,16 @@ internal sealed class PipeHandler : IAsyncDisposable
                     OnInit?.Invoke(new Init());
                     break;
 
+                case MessageType.Register:
+                    VLog.Verbose("Received Mod Registration Message");
+                    OnRegister?.Invoke(DeserializeModRegistration(payload));
+                    break;
+
+                case MessageType.UnRegister:
+                    VLog.Verbose("Received Mod UnRegistration Message");
+                    OnUnRegister?.Invoke(DeserializeModUnRegistration(payload));
+                    break;
+
                 default:
                     OnError?.Invoke(new InvalidDataException($"Unknown Message Type: {type}"));
                     break;
@@ -156,5 +171,71 @@ internal sealed class PipeHandler : IAsyncDisposable
             VLog.Error($"Dispatch Failed For {type}");
             OnError?.Invoke(ex);
         }
+    }
+
+    private static string ReadString(byte[] buf, ref int offset)
+    {
+        var len = BitConverter.ToUInt32(buf, offset);
+        offset += 4;
+        var s = Encoding.UTF8.GetString(buf, offset, (int)len);
+        offset += (int)len;
+        return s;
+    }
+
+    private static string? ReadOptionalString(byte[] buf, ref int offset)
+    {
+        var hasValue = buf[offset] != 0;
+        offset += 1;
+        return hasValue ? ReadString(buf, ref offset) : null;
+    }
+
+    private static List<string> ReadStringList(byte[] buf, ref int offset)
+    {
+        var count = BitConverter.ToUInt32(buf, offset);
+        offset += 4;
+
+        var list = new List<string>((int)count);
+        for (var i = 0; i < count; i++)
+            list.Add(ReadString(buf, ref offset));
+
+        return list;
+    }
+
+    private static uint ReadUInt32(byte[] buf, ref int offset)
+    {
+        var v = BitConverter.ToUInt32(buf, offset);
+        offset += 4;
+        return v;
+    }
+
+    private static ModRegistration DeserializeModRegistration(byte[] payload)
+    {
+        var offset = 0;
+
+        var name = ReadString(payload, ref offset);
+        var modType = (ModType)ReadUInt32(payload, ref offset);
+        var author = ReadString(payload, ref offset);
+        var version = ReadString(payload, ref offset);
+        var nexusLink = ReadOptionalString(payload, ref offset);
+        var gitHubLink = ReadOptionalString(payload, ref offset);
+        var dependencies = ReadStringList(payload, ref offset);
+
+        var info = new ModInfo(name, modType, author, version)
+        {
+            NexusLink = nexusLink,
+            GitHubLink = gitHubLink,
+            Dependencies = dependencies
+        };
+
+        return new ModRegistration(info);
+    }
+
+    private static ModUnRegistration DeserializeModUnRegistration(byte[] payload)
+    {
+        var offset = 0;
+
+        var modId = ReadUInt32(payload, ref offset);
+
+        return new ModUnRegistration(modId);
     }
 }

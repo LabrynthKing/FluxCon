@@ -22,6 +22,8 @@ namespace FluxCon;
 
 public static class Program
 {
+    private static ModHandler _modHandler = new();
+
     private static async Task Main(string[] args)
     {
         VLog.Info("FluxCon Version 0.0.1.2 Initializing...", true);
@@ -56,7 +58,14 @@ public static class Program
             }
 
             VLog.Info("========================= END MOD LIST ==========================");
+
+            // Create New ModHandler Instance
+            _modHandler = new ModHandler();
         };
+
+        pipeHandler.OnRegister += registration => { _modHandler.RegisterMod(registration.ModInfo); };
+
+        pipeHandler.OnUnRegister += unregister => { _modHandler.UnRegisterMod(unregister.ModId); };
 
         pipeHandler.OnError += exception => { VLog.Error("Pipe Listener Error", true, exception); };
 

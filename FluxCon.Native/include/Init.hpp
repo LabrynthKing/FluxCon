@@ -16,5 +16,14 @@
 
 #pragma once
 
-#define FluxVersion "0.0.1.3"
-#define W(x) STR(x)
+#include <atomic>
+
+namespace Flux
+{
+    // Boilerplate? Yes I Love Boilerplate
+    class Init
+    {
+    public:
+        static void InitEverything();
+    };
+} // namespace Flux

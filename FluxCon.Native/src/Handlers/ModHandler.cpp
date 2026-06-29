@@ -14,12 +14,35 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#pragma once
+#include "Handlers/ModHandler.hpp"
 
-#include <atomic>
-
-#include <LuaMadeSimple/LuaMadeSimple.hpp>
+#include "API/FluxCon.hpp"
+#include "Handlers/PipeHandler.hpp"
+#include "Utils/ByteWriter.hpp"
 
 namespace Flux::Handlers
 {
+    void ModHandler::RegisterMod(const ModInfo& info)
+    {
+        ByteWriter w;
+
+        w.WriteString(info.name);
+        w.WriteU32(static_cast<uint32_t>(info.type));
+        w.WriteString(info.author);
+        w.WriteString(info.version);
+        w.WriteOptionalString(info.nexusLink);
+        w.WriteOptionalString(info.gitHubLink);
+        w.WriteStringList(info.dependencies);
+
+        PipeHandler::Get().Send(MessageType::Register, std::move(w.buffer));
+    }
+
+    void ModHandler::UnRegisterMod(const uint32_t modId)
+    {
+        ByteWriter w;
+
+        w.WriteU32(modId);
+
+        PipeHandler::Get().Send(MessageType::UnRegister, std::move(w.buffer));
+    }
 } // namespace Flux::Handlers

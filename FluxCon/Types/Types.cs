@@ -14,15 +14,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using FluxCon.Utils;
+
 namespace FluxCon.Types;
 
 internal enum MessageType : uint
 {
-    Init = 1
+    Init = 1,
+    Register = 2,
+    UnRegister = 3
 }
 
 [Flags]
-internal enum ModType : uint
+public enum ModType : uint
 {
     None = 0,
     Lua = 1 << 0,
@@ -45,10 +49,23 @@ internal enum EnabledInfo : uint
     Auto
 }
 
-internal readonly struct ModInfoSimple(string name, ModType type, EnabledInfo enabledInfo, uint? loadOrder)
+internal readonly record struct ModInfoSimple(string Name, ModType Type, EnabledInfo EnabledInfo, uint? LoadOrder);
+
+public struct ModInfo(string name, ModType type, string author, string version)
 {
-    public readonly string Name = name;
-    public readonly ModType Type = type;
-    public readonly EnabledInfo EnabledInfo = enabledInfo;
-    public readonly uint? LoadOrder = loadOrder;
+    // Use Hash For ModID, Why? IDK I Just Wanna
+    public readonly uint ModId = HashUtils.GetFNV1aHash(name);
+
+    // Basic Stuff
+    public string Name = name;
+    public ModType Type = type;
+    public string Author = author;
+    public string Version = version;
+
+    // Links
+    public string? NexusLink = null;
+    public string? GitHubLink = null;
+
+    // Other Stuff
+    public List<string> Dependencies = [];
 }

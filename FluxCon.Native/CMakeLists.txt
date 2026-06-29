@@ -24,15 +24,18 @@ add_library(${TARGET} SHARED
         src/FluxConAPI_Impl.cpp
         src/Handlers/LuaHandler.cpp
         src/Handlers/PipeHandler.cpp
+        src/Handlers/ModHandler.cpp
 
         # Headers
-
         include/FluxCon.h
         include/Types.hpp
         include/API/FluxCon.hpp
         include/Handlers/LuaHandler.hpp
         include/Handlers/PipeHandler.hpp
+        include/Handlers/ModHandler.hpp
         include/Utils/ByteWriter.hpp
+        src/Init.cpp
+        include/Init.hpp
 
 )
 

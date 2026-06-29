@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+// ReSharper disable CppDFANotInitializedField
 #pragma once
 
 #include <atomic>
@@ -38,23 +39,33 @@ namespace Flux::Handlers
 
     class PipeHandler
     {
+        // Maybe Lower This?
+        static constexpr size_t MaxQueuedMessages = 2048;
+
         std::thread m_pipe_worker;
         std::atomic<bool> m_running{true};
-        std::atomic<bool> m_init{false};
+        std::atomic<PipeState> m_state{PipeState::NotStarted};
 
         std::mutex m_queue_mutex;
         std::condition_variable m_queue_cv;
         std::queue<OutgoingMessage> m_outgoing;
+        std::atomic<uint64_t> m_dropped_messages{0};
 
         HANDLE m_shutdown_event = nullptr;
+        PROCESS_INFORMATION m_child_process{};
+        bool m_has_child_process = false;
 
         void pipe_worker_start();
-        bool connect_or_launch(HANDLE& pipe_handle) const;
+        bool ensure_child_process_running();
+        bool connect_pipe(HANDLE& pipe_handle) const;
         bool write_message(HANDLE pipe_handle, const OutgoingMessage& msg) const;
 
     public:
         PipeHandler() = default;
         ~PipeHandler();
+
+        PipeHandler(const PipeHandler&) = delete;
+        PipeHandler& operator=(const PipeHandler&) = delete;
 
         static PipeHandler& Get()
         {
@@ -63,7 +74,9 @@ namespace Flux::Handlers
         }
 
         void Initialize();
-        bool HasInitialized() const;
+
+        PipeState GetState() const { return m_state.load(); }
+        uint64_t GetDroppedMessageCount() const { return m_dropped_messages.load(); }
 
         void Send(MessageType type, std::vector<uint8_t> payload);
     };

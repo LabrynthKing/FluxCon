@@ -16,5 +16,14 @@
 
 #pragma once
 
-#define FluxVersion "0.0.1.3"
-#define W(x) STR(x)
+#include "API/FluxCon.hpp"
+
+namespace Flux::Handlers
+{
+    class ModHandler
+    {
+    public:
+        static void RegisterMod(const ModInfo& info);
+        static void UnRegisterMod(uint32_t modId);
+    };
+} // namespace Flux::Handlers

@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -31,10 +32,25 @@ namespace Flux
         void WriteU32(const uint32_t v) { append(&v, sizeof(v)); }
         void WriteU8(const uint8_t v) { append(&v, sizeof(v)); }
         void WriteBool(const bool v) { WriteU8(v ? 1 : 0); }
+
         void WriteString(const std::string& s)
         {
             WriteU32(static_cast<uint32_t>(s.size()));
             append(s.data(), s.size());
+        }
+
+        void WriteOptionalString(const std::optional<std::string>& s)
+        {
+            WriteBool(s.has_value());
+            if (s.has_value())
+                WriteString(*s);
+        }
+
+        void WriteStringList(const std::vector<std::string>& list)
+        {
+            WriteU32(static_cast<uint32_t>(list.size()));
+            for (const auto& s : list)
+                WriteString(s);
         }
 
     private:

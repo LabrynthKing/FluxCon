@@ -30,6 +30,7 @@ namespace Flux::Handlers
 
     PipeHandler::~PipeHandler()
     {
+        m_state = PipeState::ShuttingDown;
         m_running = false;
 
         SetEvent(m_shutdown_event);
@@ -38,45 +39,71 @@ namespace Flux::Handlers
         if (m_pipe_worker.joinable())
             m_pipe_worker.join();
 
+        if (m_has_child_process)
+        {
+            CloseHandle(m_child_process.hProcess);
+            CloseHandle(m_child_process.hThread);
+        }
+
         CloseHandle(m_shutdown_event);
     }
-
-    bool PipeHandler::HasInitialized() const { return m_init.load(); }
 
     void PipeHandler::Send(const MessageType type, std::vector<uint8_t> payload)
     {
         {
             std::lock_guard lock(m_queue_mutex);
+
+            if (m_outgoing.size() >= MaxQueuedMessages)
+            {
+                m_outgoing.pop();
+                m_dropped_messages.fetch_add(1, std::memory_order_relaxed);
+            }
+
             m_outgoing.push(OutgoingMessage{type, std::move(payload)});
         }
 
         m_queue_cv.notify_one();
     }
 
-    bool PipeHandler::connect_or_launch(HANDLE& pipe_handle) const
+    bool PipeHandler::ensure_child_process_running()
     {
-        if (!WaitNamedPipeA(PIPE_NAME, 100))
+        if (m_has_child_process)
         {
-            STARTUPINFOA si{};
-            PROCESS_INFORMATION pi{};
-            si.cb = sizeof(si);
-            constexpr char exe_path[] = R"(.\ue4ss\Mods\FluxCon\FluxCon.exe)";
-            if (const auto work_dir = R"(.\ue4ss\Mods\FluxCon\)"; CreateProcessA(
-                    exe_path, nullptr, nullptr, nullptr, FALSE, CREATE_NEW_CONSOLE, nullptr, work_dir, &si, &pi))
+            if (WaitForSingleObject(m_child_process.hProcess, 0) == WAIT_TIMEOUT)
+                return true;
+
+            CloseHandle(m_child_process.hProcess);
+            CloseHandle(m_child_process.hThread);
+            m_has_child_process = false;
+        }
+
+        STARTUPINFOA si{};
+        si.cb = sizeof(si);
+        constexpr char exe_path[] = R"(.\ue4ss\Mods\FluxCon\FluxCon.exe)";
+
+        PROCESS_INFORMATION pi{};
+        if (constexpr auto work_dir = R"(.\ue4ss\Mods\FluxCon\)"; !CreateProcessA(
+                exe_path, nullptr, nullptr, nullptr, FALSE, CREATE_NEW_CONSOLE, nullptr, work_dir, &si, &pi))
+            return false;
+
+        m_child_process = pi;
+        m_has_child_process = true;
+        return true;
+    }
+
+    bool PipeHandler::connect_pipe(HANDLE& pipe_handle) const
+    {
+        pipe_handle = INVALID_HANDLE_VALUE;
+
+        while (m_running && pipe_handle == INVALID_HANDLE_VALUE)
+        {
+            if (WaitNamedPipeA(PIPE_NAME, 500))
             {
-                CloseHandle(pi.hProcess);
-                CloseHandle(pi.hThread);
+                pipe_handle =
+                    CreateFileA(PIPE_NAME, GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, nullptr);
             }
         }
 
-        pipe_handle = INVALID_HANDLE_VALUE;
-        while (m_running && pipe_handle == INVALID_HANDLE_VALUE)
-        {
-            pipe_handle =
-                CreateFileA(PIPE_NAME, GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, nullptr);
-            if (pipe_handle == INVALID_HANDLE_VALUE)
-                std::this_thread::sleep_for(std::chrono::milliseconds(250));
-        }
         return pipe_handle != INVALID_HANDLE_VALUE;
     }
 
@@ -85,13 +112,11 @@ namespace Flux::Handlers
         const MessageHeader header{static_cast<uint32_t>(msg.type), static_cast<uint32_t>(msg.payload.size())};
 
         std::vector<uint8_t> frame(sizeof(header) + msg.payload.size());
-
         memcpy(frame.data(), &header, sizeof(header));
         if (!msg.payload.empty())
             memcpy(frame.data() + sizeof(header), msg.payload.data(), msg.payload.size());
 
         OVERLAPPED ov{};
-
         ov.hEvent = CreateEventA(nullptr, TRUE, FALSE, nullptr);
 
         if (const BOOL ok = WriteFile(pipe_handle, frame.data(), static_cast<DWORD>(frame.size()), nullptr, &ov);
@@ -121,13 +146,24 @@ namespace Flux::Handlers
 
     void PipeHandler::pipe_worker_start()
     {
+        bool first_attempt = true;
+
         while (m_running)
         {
-            auto pipe_handle = INVALID_HANDLE_VALUE;
-            if (!connect_or_launch(pipe_handle))
-                break;
+            m_state = first_attempt ? PipeState::Connecting : PipeState::Reconnecting;
 
-            m_init = true;
+            if (!ensure_child_process_running())
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                continue;
+            }
+
+            auto pipe_handle = INVALID_HANDLE_VALUE;
+            if (!connect_pipe(pipe_handle))
+                break; // m_running Went False During Connect
+
+            m_state = PipeState::Connected;
+            first_attempt = false;
 
             bool pipe_alive = true;
             while (m_running && pipe_alive)
@@ -146,8 +182,9 @@ namespace Flux::Handlers
                     pipe_alive = false;
             }
 
-            m_init = false;
             CloseHandle(pipe_handle);
         }
+
+        m_state = PipeState::ShuttingDown;
     }
 } // namespace Flux::Handlers

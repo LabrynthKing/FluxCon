@@ -1,3 +1,4 @@
+
 // FluxCon => A Diagnostic Logger For Subnautica 2
 // Copyright (C) 2026 LabrynthKing
 //
@@ -14,7 +15,25 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#pragma once
+#include "Init.hpp"
 
-#define FluxVersion "0.0.1.3"
-#define W(x) STR(x)
+#include <thread>
+
+#include <DynamicOutput/DynamicOutput.hpp>
+
+#include "Handlers/PipeHandler.hpp"
+
+namespace Flux
+{
+    using namespace RC;
+
+    void Init::InitEverything()
+    {
+        // Init PipeHandler
+        Handlers::PipeHandler::Get().Initialize();
+        Output::send(STR("Pipe Handler Initialized"));
+
+        Handlers::PipeHandler::Get().Send(MessageType::Init, {});
+        Output::send(STR("Init Message Sent"));
+    }
+} // namespace Flux

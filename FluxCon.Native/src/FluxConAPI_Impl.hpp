@@ -23,7 +23,9 @@ namespace Flux
     class FluxConAPI_Impl final : public FluxConAPI
     {
     protected:
-        bool IsLoggerInitInternal() override;
+        LoggerState GetLoggerStateInternal() override;
+        void RegisterModInternal(const ModInfo& info) override;
+        void UnRegisterModInternal(uint32_t modId) override;
 
     public:
         static FluxConAPI_Impl* InternalInstance();

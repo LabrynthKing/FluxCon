@@ -16,6 +16,9 @@
 
 #include "FluxConAPI_Impl.hpp"
 
+#include "Handlers/ModHandler.hpp"
+#include "Handlers/PipeHandler.hpp"
+
 namespace Flux
 {
     FluxConAPI_Impl* FluxConAPI_Impl::InternalInstance()
@@ -24,7 +27,14 @@ namespace Flux
         return &inst;
     }
 
-    bool FluxConAPI_Impl::IsLoggerInitInternal() { return false; }
+    LoggerState FluxConAPI_Impl::GetLoggerStateInternal()
+    {
+        return static_cast<LoggerState>(Handlers::PipeHandler::Get().GetState());
+    }
+
+    void FluxConAPI_Impl::RegisterModInternal(const ModInfo& info) { Handlers::ModHandler::RegisterMod(info); }
+
+    void FluxConAPI_Impl::UnRegisterModInternal(const uint32_t modId) { Handlers::ModHandler::UnRegisterMod(modId); }
 } // namespace Flux
 
 extern "C"
