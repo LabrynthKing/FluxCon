@@ -18,8 +18,16 @@ using FluxCon.Types;
 
 namespace FluxCon.Utils;
 
+/// <summary>
+///     Simple Logging Utilities
+/// </summary>
 internal static class LogUtils
 {
+    /// <summary>
+    ///     Converts ModType To Presentable String
+    /// </summary>
+    /// <param name="modType">The Mod's Type</param>
+    /// <returns>GigaChad String Of The Mod's Type</returns>
     public static string ModTypeToString(ModType modType)
     {
         if (modType == ModType.None) return "Unknown";
@@ -34,6 +42,12 @@ internal static class LogUtils
         return string.Join("/", parts);
     }
 
+    /// <summary>
+    ///     Converted EnabledInfo To Presentable String
+    /// </summary>
+    /// <param name="enabledInfo">The Mod's EnabledInfo</param>
+    /// <returns>GigaChad String Of The Mod's EnabledInfo</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Should Never Happen, But It's Here Because My IDE Was Crying</exception>
     public static string EnabledInfoToString(EnabledInfo enabledInfo)
     {
         return enabledInfo switch

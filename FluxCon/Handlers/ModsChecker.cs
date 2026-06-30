@@ -20,18 +20,34 @@ using FluxCon.Types;
 
 namespace FluxCon.Handlers;
 
+/// <summary>
+///     Checks Dem UnRegistered Mods On StartUp
+/// </summary>
 internal static class ModsChecker
 {
+    /// <summary>
+    ///     Current AppDirectory AKA FluxCon/FluxCon.exe
+    /// </summary>
     private static readonly string AppDir = AppDomain.CurrentDomain.BaseDirectory;
 
-    // FluxCon -> Mods
+    /// <summary>
+    ///     UE4SS Mods Directory
+    /// </summary>
     private static readonly string ModsDir = Path.GetFullPath(Path.Combine(AppDir, ".."));
 
-    // Mods -> ue4ss -> Win64
+    /// <summary>
+    ///     Win64 Directory With The Exe
+    /// </summary>
     public static readonly string Win64Dir = Path.GetFullPath(Path.Combine(ModsDir, "..", ".."));
 
+    /// <summary>
+    ///     All Mods Currently Present In The File System
+    /// </summary>
     public static ImmutableList<ModInfoSimple> AllMods { get; private set; } = [];
 
+    /// <summary>
+    ///     Gets All Mods From The FileSystem And Populates The AllMods List
+    /// </summary>
     public static void GetAllMods()
     {
         // Check All Folders In Current Dir, Then Just Assign Mod Stuff
@@ -99,6 +115,11 @@ internal static class ModsChecker
         }
     }
 
+    /// <summary>
+    ///     Parses mods.txt For Load Order And Other Info
+    /// </summary>
+    /// <param name="path">Path To mods.txt</param>
+    /// <returns>Dictionary Of All Mods In mods.txt With Their Enabled State And Load Order</returns>
     private static Dictionary<string, (bool IsEnabled, uint Order)> ParseModsTxt(string path)
     {
         var registry = new Dictionary<string, (bool, uint)>(StringComparer.OrdinalIgnoreCase);

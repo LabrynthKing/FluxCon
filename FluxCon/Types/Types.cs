@@ -18,6 +18,9 @@ using FluxCon.Utils;
 
 namespace FluxCon.Types;
 
+/// <summary>
+///     Internal MessageType Header Enum For Pipe Communication
+/// </summary>
 internal enum MessageType : uint
 {
     Init = 1,
@@ -27,6 +30,9 @@ internal enum MessageType : uint
     LogEx = 5
 }
 
+/// <summary>
+///     ModType Enum For Well...ModType Duh
+/// </summary>
 [Flags]
 internal enum ModType : uint
 {
@@ -43,6 +49,9 @@ internal enum ModType : uint
     LuaCppBlueprint = Lua | Cpp | Blueprint
 }
 
+/// <summary>
+///     EnabledInfo Enum For Well...How The Mod Is Enabled Duh
+/// </summary>
 internal enum EnabledInfo : uint
 {
     Disabled,
@@ -51,6 +60,9 @@ internal enum EnabledInfo : uint
     Auto
 }
 
+/// <summary>
+///     Enum Of All Log Levels Supported By FluxCon
+/// </summary>
 internal enum LogLevel : uint
 {
     Info,
@@ -61,6 +73,9 @@ internal enum LogLevel : uint
     Fatal
 }
 
+/// <summary>
+///     Enum Containing Allowed Exceptions (May Increase In The Future)
+/// </summary>
 internal enum FluxEx : uint
 {
     None,
@@ -76,24 +91,67 @@ internal enum FluxEx : uint
     ApiVersionMismatch
 }
 
+/// <summary>
+///     Simple Mod Info For UnRegistered Mods And Detected Mods
+/// </summary>
+/// <param name="Name">The Name Of The Mod</param>
+/// <param name="Type">The Type Of The Mod</param>
+/// <param name="EnabledInfo">The Way The Mod Is Enabled</param>
+/// <param name="LoadOrder">The Load Order (If Applicable) Of The Mod</param>
 internal readonly record struct ModInfoSimple(string Name, ModType Type, EnabledInfo EnabledInfo, uint? LoadOrder);
 
+/// <summary>
+///     ModInfo For Registered Mods
+/// </summary>
+/// <param name="name">The Unique Name Of The Mod</param>
+/// <param name="displayName">The Display Name Of The Mod</param>
+/// <param name="type">The Type Of The Mod</param>
+/// <param name="author">The Author Of The Mod</param>
+/// <param name="version">The Version Of The Mod</param>
 internal struct ModInfo(string name, string displayName, ModType type, string author, string version)
 {
-    // Use Hash For ModID, Why? IDK I Just Wanna
+    /// <summary>
+    ///     ModId As Hashed Mod Unique Name
+    /// </summary>
     public readonly uint ModId = HashUtils.GetFNV1aHash(name);
 
-    // Basic Stuff
+    /// <summary>
+    ///     Name Of The Mod
+    /// </summary>
     public string Name = name;
+
+    /// <summary>
+    ///     Display Name Of The Mod
+    /// </summary>
     public string DisplayName = displayName;
+
+    /// <summary>
+    ///     The Type Of The Mod
+    /// </summary>
     public ModType Type = type;
+
+    /// <summary>
+    ///     Author Of The Mod
+    /// </summary>
     public string Author = author;
+
+    /// <summary>
+    ///     The Version Of The Mod
+    /// </summary>
     public string Version = version;
 
-    // Links
+    /// <summary>
+    ///     NexusMods Link Of The Mod
+    /// </summary>
     public string? NexusLink = null;
+
+    /// <summary>
+    ///     GitHub Link Of The Mod
+    /// </summary>
     public string? GitHubLink = null;
 
-    // Other Stuff
+    /// <summary>
+    ///     Dependencies Of The Mod; Stored As Unique Mod Name
+    /// </summary>
     public List<string> Dependencies = [];
 }

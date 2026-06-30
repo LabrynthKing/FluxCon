@@ -16,9 +16,16 @@
 
 namespace FluxCon.Utils;
 
+/// <summary>
+///     Simple Hashing Utilities (Literally Only 1 Method)
+/// </summary>
 internal static class HashUtils
 {
-    // FNV1a Hash
+    /// <summary>
+    ///     FNV1a Hash Converter
+    /// </summary>
+    /// <param name="input">String To Convert</param>
+    /// <returns>The Hash As An Unsigned Integer</returns>
     // ReSharper disable once InconsistentNaming
     public static uint GetFNV1aHash(string input)
     {

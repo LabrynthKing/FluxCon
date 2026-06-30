@@ -16,12 +16,36 @@
 
 namespace FluxCon.Types;
 
+/// <summary>
+///     Init Model, Nothing Special
+/// </summary>
 internal record Init;
 
+/// <summary>
+///     Mod Registration Model
+/// </summary>
+/// <param name="ModInfo">The Mod Info From C++</param>
 internal record ModRegistration(ModInfo ModInfo);
 
+/// <summary>
+///     Mod UnRegistration Model
+/// </summary>
+/// <param name="ModId">The ModId From C++</param>
 internal record ModUnRegistration(uint ModId);
 
+/// <summary>
+///     Log Model
+/// </summary>
+/// <param name="ModId">The ModId From C++</param>
+/// <param name="Level">The Log's Level From C++</param>
+/// <param name="Message">The Log Message</param>
 internal record Log(uint ModId, LogLevel Level, string Message);
 
+/// <summary>
+///     Log Model With Custom Exception
+/// </summary>
+/// <param name="ModId">The ModId From C++</param>
+/// <param name="Level">The Log's Level From C++</param>
+/// <param name="Message">The Log Message</param>
+/// <param name="Ex">Custom Exception Value From C++</param>
 internal record LogEx(uint ModId, LogLevel Level, string Message, FluxEx Ex);

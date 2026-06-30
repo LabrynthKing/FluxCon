@@ -21,14 +21,35 @@ using static FluxCon.Program;
 
 namespace FluxCon.Handlers;
 
+/// <summary>
+///     Pipe Handler To Manage The Pipe Connection Between C# And C++
+/// </summary>
 internal sealed class PipeHandler : IAsyncDisposable
 {
+    /// <summary>
+    ///     The Pipe Name
+    /// </summary>
     private const string PipeName = "FluxConLogger";
 
+    /// <summary>
+    ///     Cancellation Token Source
+    /// </summary>
     private readonly CancellationTokenSource _cts = new();
+
+    /// <summary>
+    ///     Listening Task Instance
+    /// </summary>
     private Task? _listenTask;
+
+    /// <summary>
+    ///     Named Pipe Server Stream
+    /// </summary>
     private NamedPipeServerStream? _pipeServer;
 
+    /// <summary>
+    ///     Disposes Resources Asynchronously
+    /// </summary>
+    /// <returns>A ValueTask Duh</returns>
     public async ValueTask DisposeAsync()
     {
         await _cts.CancelAsync();
@@ -47,63 +68,94 @@ internal sealed class PipeHandler : IAsyncDisposable
         _cts.Dispose();
     }
 
+    /// <summary>
+    ///     Event Fired On Initialization Message
+    /// </summary>
     public event Action<Init>? OnInit;
 
+    /// <summary>
+    ///     Event Fired On Mod Registration Message
+    /// </summary>
     public event Action<ModRegistration>? OnRegister;
 
+    /// <summary>
+    ///     Event Fired On Mod Unregistration Message
+    /// </summary>
     public event Action<ModUnRegistration>? OnUnRegister;
 
+    /// <summary>
+    ///     Event Fired On Standard Log Message
+    /// </summary>
     public event Action<Log>? OnLog;
 
+    /// <summary>
+    ///     Event Fired On Extended Log Message
+    /// </summary>
     public event Action<LogEx>? OnLogEx;
 
+    /// <summary>
+    ///     Event Fired On Pipe Exception
+    /// </summary>
     public event Action<Exception>? OnError;
 
+    /// <summary>
+    ///     Starts The Pipe Listener
+    /// </summary>
     public void Start()
     {
         _listenTask = Task.Run(() => ListenLoopAsync(_cts.Token));
     }
 
+    /// <summary>
+    ///     Asynchronous Server Connection Listening Loop
+    /// </summary>
+    /// <param name="ct">The Cancellation Token</param>
+    /// <returns>A Task OMG PRO</returns>
     private async Task ListenLoopAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
         {
-            try
+            await using (_pipeServer = new NamedPipeServerStream(PipeName, PipeDirection.In, 1,
+                             PipeTransmissionMode.Byte,
+                             PipeOptions.Asynchronous))
             {
-                _pipeServer = new NamedPipeServerStream(PipeName, PipeDirection.In, 1, PipeTransmissionMode.Byte,
-                    PipeOptions.Asynchronous);
+                try
+                {
+                    Logger.Verbose("Waiting For Pipe Connection...");
+                    await _pipeServer.WaitForConnectionAsync(ct);
+                    Logger.Debug("Pipe Client Connected");
+                    await ReadLoopAsync(_pipeServer, ct);
+                }
+                catch (OperationCanceledException)
+                {
+                    Logger.Debug("Pipe Listener Cancelled; Shutting Down");
+                    break;
+                }
+                catch (IOException ex)
+                {
+                    Logger.Warn(ex, "Pipe Disconnected");
+                    OnError?.Invoke(ex);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, "Pipe Error");
+                    OnError?.Invoke(ex);
+                }
+            }
 
-                Logger.Verbose("Waiting For Pipe Connection...");
-                await _pipeServer.WaitForConnectionAsync(ct);
-                Logger.Debug("Pipe Client Connected");
-                await ReadLoopAsync(_pipeServer, ct);
-            }
-            catch (OperationCanceledException)
-            {
-                Logger.Debug("Pipe Listener Cancelled; Shutting Down");
-                break;
-            }
-            catch (IOException ex)
-            {
-                Logger.Warn(ex, "Pipe Disconnected");
-                OnError?.Invoke(ex);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(ex, "Pipe Error");
-                OnError?.Invoke(ex);
-            }
-            finally
-            {
-                _pipeServer?.Dispose();
-                _pipeServer = null;
-            }
+            _pipeServer = null;
 
             // Small Delay Before Re-Running
             if (!ct.IsCancellationRequested) await Task.Delay(250, ct).ContinueWith(_ => { }, ct);
         }
     }
 
+    /// <summary>
+    ///     Asynchronous Packet Reading Loop
+    /// </summary>
+    /// <param name="pipe">The Connected Stream Target</param>
+    /// <param name="ct">The Cancellation Token</param>
+    /// <returns>A Task Strikes Again</returns>
     private async Task ReadLoopAsync(Stream pipe, CancellationToken ct)
     {
         var headerBuf = new byte[8];
@@ -131,6 +183,14 @@ internal sealed class PipeHandler : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    ///     Reads Exact Number Of Bytes From Stream
+    /// </summary>
+    /// <param name="s">The Source Stream</param>
+    /// <param name="buf">The Target Data Buffer</param>
+    /// <param name="count">The Number Of Bytes To Read</param>
+    /// <param name="ct">The Cancellation Token</param>
+    /// <returns>True If Successfully Read, False Otherwise</returns>
     private static async Task<bool> ReadExactAsync(Stream s, byte[] buf, int count, CancellationToken ct)
     {
         var read = 0;
@@ -145,6 +205,11 @@ internal sealed class PipeHandler : IAsyncDisposable
         return true;
     }
 
+    /// <summary>
+    ///     Dispatches Messages To Corresponding Events
+    /// </summary>
+    /// <param name="type">The Target Message Type</param>
+    /// <param name="payload">The Incoming Message Byte Payload</param>
     private void Dispatch(MessageType type, byte[] payload)
     {
         try
@@ -186,6 +251,12 @@ internal sealed class PipeHandler : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    ///     Reads String Payload Explicitly
+    /// </summary>
+    /// <param name="buf">The Target Data Buffer</param>
+    /// <param name="offset">The Tracked Data Offset Index</param>
+    /// <returns>The Processed Target String</returns>
     private static string ReadString(byte[] buf, ref int offset)
     {
         var len = BitConverter.ToUInt32(buf, offset);
@@ -195,6 +266,12 @@ internal sealed class PipeHandler : IAsyncDisposable
         return s;
     }
 
+    /// <summary>
+    ///     Reads Optional String Payload Privately
+    /// </summary>
+    /// <param name="buf">The Target Data Buffer</param>
+    /// <param name="offset"> he Tracked Data Offset Index</param>
+    /// <returns> The Processed Target String, Or Null If Not present </returns>
     private static string? ReadOptionalString(byte[] buf, ref int offset)
     {
         var hasValue = buf[offset] != 0;
@@ -202,6 +279,12 @@ internal sealed class PipeHandler : IAsyncDisposable
         return hasValue ? ReadString(buf, ref offset) : null;
     }
 
+    /// <summary>
+    ///     Reads String List Payload Sequentially
+    /// </summary>
+    /// <param name="buf">The Target Data Buffer</param>
+    /// <param name="offset">The Tracked Data Offset Index</param>
+    /// <returns>The Parsed Sequential Collection Of Strings</returns>
     private static List<string> ReadStringList(byte[] buf, ref int offset)
     {
         var count = BitConverter.ToUInt32(buf, offset);
@@ -214,6 +297,12 @@ internal sealed class PipeHandler : IAsyncDisposable
         return list;
     }
 
+    /// <summary>
+    ///     Reads Unsigned Integer Metadata Inline
+    /// </summary>
+    /// <param name="buf">The Target Data Buffer</param>
+    /// <param name="offset">The Tracked Data Offset Index</param>
+    /// <returns>The Read Unsigned Long Value</returns>
     private static uint ReadUInt32(byte[] buf, ref int offset)
     {
         var v = BitConverter.ToUInt32(buf, offset);
@@ -221,6 +310,11 @@ internal sealed class PipeHandler : IAsyncDisposable
         return v;
     }
 
+    /// <summary>
+    ///     Deserializes Mod Registration Context Data
+    /// </summary>
+    /// <param name="payload">The Incoming Message Byte Payload</param>
+    /// <returns>The Deserialized Mod Registration Target Object</returns>
     private static ModRegistration DeserializeModRegistration(byte[] payload)
     {
         var offset = 0;
@@ -244,6 +338,11 @@ internal sealed class PipeHandler : IAsyncDisposable
         return new ModRegistration(info);
     }
 
+    /// <summary>
+    ///     Deserializes Mod Unregistration Context Data
+    /// </summary>
+    /// <param name="payload">The Incoming Message Byte Payload</param>
+    /// <returns>The Deserialized Mod Unregistration Target Object</returns>
     private static ModUnRegistration DeserializeModUnRegistration(byte[] payload)
     {
         var offset = 0;
@@ -253,6 +352,11 @@ internal sealed class PipeHandler : IAsyncDisposable
         return new ModUnRegistration(modId);
     }
 
+    /// <summary>
+    ///     Deserializes Basic Log Message Payload
+    /// </summary>
+    /// <param name="payload">The Incoming Message Byte Payload</param>
+    /// <returns>The Deserialized Standard Log Target Object</returns>
     private static Log DeserializeLog(byte[] payload)
     {
         var offset = 0;
@@ -264,6 +368,11 @@ internal sealed class PipeHandler : IAsyncDisposable
         return new Log(modId, level, message);
     }
 
+    /// <summary>
+    ///     Deserializes Extended Log Message Payload
+    /// </summary>
+    /// <param name="payload">The Incoming Message Byte Payload</param>
+    /// <returns>The Deserialized Extended Log Target Object</returns>
     private static LogEx DeserializeLogEx(byte[] payload)
     {
         var offset = 0;

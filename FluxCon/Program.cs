@@ -20,14 +20,29 @@ using FluxCon.Utils;
 
 namespace FluxCon;
 
+/// <summary>
+///     The Main Program Class
+/// </summary>
 public static class Program
 {
+    /// <summary>
+    ///     Current Version Of FluxCon
+    /// </summary>
     private const string Version = "0.0.1.4";
 
+    /// <summary>
+    ///     VLog Instance For FluxCon Itself
+    /// </summary>
     internal static VLog Logger = null!;
 
+    /// <summary>
+    ///     Current Mod Handler, Re-Assigned In Case Of Disconnect
+    /// </summary>
     private static ModHandler _modHandler = new();
 
+    /// <summary>
+    ///     ModInfo For PluxCon Itself, Not Registered Though
+    /// </summary>
     private static readonly ModInfo FluxConModInfo = new()
     {
         Name = "FluxCon",
@@ -40,7 +55,10 @@ public static class Program
         Dependencies = []
     };
 
-    private static async Task Main(string[] args)
+    /// <summary>
+    ///     The Main Method
+    /// </summary>
+    private static async Task Main()
     {
         // Init Logger First
         Logger = new VLog(FluxConModInfo);
@@ -74,6 +92,10 @@ public static class Program
         await pipeHandler.DisposeAsync();
     }
 
+    /// <summary>
+    ///     Registers PipeHandler Events
+    /// </summary>
+    /// <param name="pipeHandler">The Current PipeHandler Being Used By The Program</param>
     private static void RegisterPipeHandlerActions(PipeHandler pipeHandler)
     {
         pipeHandler.OnInit += _ =>
@@ -87,6 +109,7 @@ public static class Program
             Logger.Info($"Enabled: {enabledCount} | Disabled: {totalCount - enabledCount}");
 
             // OMG FORMATTING PRO
+            // TODO: Maybe Use Something Better For Formatting Or Something?
             Logger.Info("======================== BEGIN MOD LIST ========================");
             var count = 1;
             foreach (var mod in ModsChecker.AllMods)

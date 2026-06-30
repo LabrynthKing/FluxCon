@@ -18,8 +18,19 @@ using FluxCon.Types;
 
 namespace FluxCon.Handlers;
 
+/// <summary>
+///     Handles All Logs
+/// </summary>
 internal static class LogHandler
 {
+    /// <summary>
+    ///     Handles Logs
+    /// </summary>
+    /// <param name="handler">The Current ModHandler Instance</param>
+    /// <param name="modId">The Mod's Hashed ID</param>
+    /// <param name="level">The Log Level</param>
+    /// <param name="message">The Log Message</param>
+    /// <exception cref="ArgumentOutOfRangeException">In Case LogLevel Is Out Of Range (Should Never Happen)</exception>
     public static void HandleLog(ModHandler handler, uint modId, LogLevel level, string message)
     {
         var logger = handler.GetLogger(modId);
@@ -51,6 +62,15 @@ internal static class LogHandler
         }
     }
 
+    /// <summary>
+    ///     Handles Logs With Custom Exceptions
+    /// </summary>
+    /// <param name="handler">The Current ModHandler Instance</param>
+    /// <param name="modId">The Mod's Hashed ID</param>
+    /// <param name="level">The Log Level</param>
+    /// <param name="message">The Log Message</param>
+    /// <param name="ex">Custom FluxEx Exception</param>
+    /// <exception cref="ArgumentOutOfRangeException">In Case LogLevel Is Out Of Range (Should Never Happen)</exception>
     public static void HandleLogEx(ModHandler handler, uint modId, LogLevel level, string message, FluxEx ex)
     {
         var logger = handler.GetLogger(modId);
@@ -84,6 +104,12 @@ internal static class LogHandler
         }
     }
 
+    /// <summary>
+    ///     Casts A Spell On FluxEx To Make It Into Exception
+    /// </summary>
+    /// <param name="ex">The Custom FluxEx Exception</param>
+    /// <returns>The Resulting Exception Instance</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Just In Case, Cuz This CAN Happen If I Am Stupid</exception>
     private static Exception? CastExceptionSpell(FluxEx ex)
     {
         return ex switch

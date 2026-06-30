@@ -21,11 +21,25 @@ using static FluxCon.Program;
 
 namespace FluxCon.Handlers;
 
+/// <summary>
+///     Handles All Registered Mods
+/// </summary>
 internal class ModHandler
 {
+    /// <summary>
+    ///     Concurrent Dictionary Of All Mod Loggers Using ModId For Fast LookUp
+    /// </summary>
     private readonly ConcurrentDictionary<uint, VLog> _loggers = new();
+
+    /// <summary>
+    ///     Concurrent Dictionary Of All Registered Mods
+    /// </summary>
     public ConcurrentDictionary<uint, ModInfo> Mods = new();
 
+    /// <summary>
+    ///     Registers The Mod And Creates A Logger
+    /// </summary>
+    /// <param name="mod">ModInfo Of The Mod</param>
     public void RegisterMod(ModInfo mod)
     {
         Mods[mod.ModId] = mod;
@@ -37,6 +51,10 @@ internal class ModHandler
         _loggers.GetOrAdd(mod.ModId, static (_, m) => new VLog(m), mod);
     }
 
+    /// <summary>
+    ///     UnRegisters The Mod And Disposes The Logger
+    /// </summary>
+    /// <param name="modId">The Mod's Hashed ID</param>
     public void UnRegisterMod(uint modId)
     {
         if (Mods.Remove(modId, out var mod))
@@ -46,6 +64,11 @@ internal class ModHandler
         if (_loggers.TryRemove(modId, out var logger)) logger.Dispose();
     }
 
+    /// <summary>
+    ///     Gets The Mod's Logger Instance
+    /// </summary>
+    /// <param name="modId">The Mod's Hashed ID</param>
+    /// <returns></returns>
     public VLog? GetLogger(uint modId)
     {
         // ReSharper disable once CanSimplifyDictionaryTryGetValueWithGetValueOrDefault
