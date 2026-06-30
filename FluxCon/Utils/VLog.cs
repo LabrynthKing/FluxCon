@@ -18,10 +18,11 @@ using FluxCon.Handlers;
 using FluxCon.Types;
 using Serilog;
 using Serilog.Events;
+using Log = Serilog.Log;
 
 namespace FluxCon.Utils;
 
-public class VLog : IDisposable, IAsyncDisposable
+internal class VLog : IDisposable, IAsyncDisposable
 {
     private readonly uint _modId;
     private readonly string _modName;
@@ -32,10 +33,10 @@ public class VLog : IDisposable, IAsyncDisposable
 
     static VLog()
     {
+        var logFile = Path.Combine(ModsChecker.Win64Dir, "FluxCon.log");
+
         try
         {
-            var logFile = Path.Combine(ModsChecker.Win64Dir, "FluxCon.log");
-
             // Delete Older File
             // TODO: Add A Config To Not Do This
             if (File.Exists(logFile)) File.Delete(logFile);
@@ -57,7 +58,7 @@ public class VLog : IDisposable, IAsyncDisposable
             .Enrich.FromLogContext()
             .WriteTo.Console(
                 outputTemplate: "[{Timestamp:HH:mm:ss}] [{Level:u3}] [{ModLabel}] {Message:lj}{NewLine}{Exception}")
-            .WriteTo.File("FluxCon.log",
+            .WriteTo.File(logFile,
                 outputTemplate: "[{Timestamp:HH:mm:ss}] [{Level:u3}] [{ModLabel}] {Message:lj}{NewLine}{Exception}");
 
         Log.Logger = config.CreateLogger();

@@ -53,6 +53,10 @@ internal sealed class PipeHandler : IAsyncDisposable
 
     public event Action<ModUnRegistration>? OnUnRegister;
 
+    public event Action<Log>? OnLog;
+
+    public event Action<LogEx>? OnLogEx;
+
     public event Action<Exception>? OnError;
 
     public void Start()
@@ -162,6 +166,14 @@ internal sealed class PipeHandler : IAsyncDisposable
                     OnUnRegister?.Invoke(DeserializeModUnRegistration(payload));
                     break;
 
+                case MessageType.Log:
+                    OnLog?.Invoke(DeserializeLog(payload));
+                    break;
+
+                case MessageType.LogEx:
+                    OnLogEx?.Invoke(DeserializeLogEx(payload));
+                    break;
+
                 default:
                     OnError?.Invoke(new InvalidDataException($"Unknown Message Type: {type}"));
                     break;
@@ -239,5 +251,28 @@ internal sealed class PipeHandler : IAsyncDisposable
         var modId = ReadUInt32(payload, ref offset);
 
         return new ModUnRegistration(modId);
+    }
+
+    private static Log DeserializeLog(byte[] payload)
+    {
+        var offset = 0;
+
+        var modId = ReadUInt32(payload, ref offset);
+        var level = (LogLevel)ReadUInt32(payload, ref offset);
+        var message = ReadString(payload, ref offset);
+
+        return new Log(modId, level, message);
+    }
+
+    private static LogEx DeserializeLogEx(byte[] payload)
+    {
+        var offset = 0;
+
+        var modId = ReadUInt32(payload, ref offset);
+        var level = (LogLevel)ReadUInt32(payload, ref offset);
+        var message = ReadString(payload, ref offset);
+        var ex = (FluxEx)ReadUInt32(payload, ref offset);
+
+        return new LogEx(modId, level, message, ex);
     }
 }

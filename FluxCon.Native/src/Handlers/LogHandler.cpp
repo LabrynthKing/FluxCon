@@ -14,37 +14,34 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include "Handlers/ModHandler.hpp"
+#include "Handlers/LogHandler.hpp"
 
-#include "API/FluxCon.hpp"
 #include "Handlers/PipeHandler.hpp"
 #include "Types.hpp"
 #include "Utils/ByteWriter.hpp"
 
 namespace Flux::Handlers
 {
-    void ModHandler::RegisterMod(const ModInfo& info)
-    {
-        ByteWriter w;
-
-        w.WriteString(info.name);
-        w.WriteString(info.displayName);
-        w.WriteU32(static_cast<uint32_t>(info.type));
-        w.WriteString(info.author);
-        w.WriteString(info.version);
-        w.WriteOptionalString(info.nexusLink);
-        w.WriteOptionalString(info.gitHubLink);
-        w.WriteStringList(info.dependencies);
-
-        PipeHandler::Get().Send(MessageType::Register, std::move(w.buffer));
-    }
-
-    void ModHandler::UnRegisterMod(const uint32_t modId)
+    void LogHandler::Log(const uint32_t modId, LogLevel level, const std::string& message)
     {
         ByteWriter w;
 
         w.WriteU32(modId);
+        w.WriteU32(static_cast<uint32_t>(level));
+        w.WriteString(message);
 
-        PipeHandler::Get().Send(MessageType::UnRegister, std::move(w.buffer));
+        PipeHandler::Get().Send(MessageType::Log, std::move(w.buffer));
+    }
+
+    void LogHandler::Log(const uint32_t modId, LogLevel level, const std::string& message, Exception ex)
+    {
+        ByteWriter w;
+
+        w.WriteU32(modId);
+        w.WriteU32(static_cast<uint32_t>(level));
+        w.WriteString(message);
+        w.WriteU32(static_cast<uint32_t>(ex));
+
+        PipeHandler::Get().Send(MessageType::LogEx, std::move(w.buffer));
     }
 } // namespace Flux::Handlers

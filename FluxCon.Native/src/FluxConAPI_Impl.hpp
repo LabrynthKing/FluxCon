@@ -26,6 +26,8 @@ namespace Flux
         LoggerState GetLoggerStateInternal() override;
         void RegisterModInternal(const ModInfo& info) override;
         void UnRegisterModInternal(uint32_t modId) override;
+        void LogInternal(uint32_t modId, LogLevel level, const std::string& message) override;
+        void LogInternal(uint32_t modId, LogLevel level, const std::string& message, Exception ex) override;
 
     public:
         static FluxConAPI_Impl* InternalInstance();

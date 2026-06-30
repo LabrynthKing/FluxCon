@@ -16,6 +16,7 @@
 
 #include "FluxConAPI_Impl.hpp"
 
+#include "Handlers/LogHandler.hpp"
 #include "Handlers/ModHandler.hpp"
 #include "Handlers/PipeHandler.hpp"
 
@@ -35,6 +36,17 @@ namespace Flux
     void FluxConAPI_Impl::RegisterModInternal(const ModInfo& info) { Handlers::ModHandler::RegisterMod(info); }
 
     void FluxConAPI_Impl::UnRegisterModInternal(const uint32_t modId) { Handlers::ModHandler::UnRegisterMod(modId); }
+
+    void FluxConAPI_Impl::LogInternal(const uint32_t modId, const LogLevel level, const std::string& message)
+    {
+        Handlers::LogHandler::Log(modId, level, message);
+    }
+
+    void FluxConAPI_Impl::LogInternal(const uint32_t modId, const LogLevel level, const std::string& message,
+                                      const Exception ex)
+    {
+        Handlers::LogHandler::Log(modId, level, message, ex);
+    }
 } // namespace Flux
 
 extern "C"

@@ -46,10 +46,10 @@ namespace Flux
 
         auto on_program_start() -> void override
         {
-            Output::send<LogLevel::Normal>(STR("Initializing FluxCon"));
+            Output::send<RC::LogLevel::Normal>(STR("Initializing FluxCon"));
 
             Init::InitEverything();
-            Output::send<LogLevel::Normal>(STR("FluxCon Initialized"));
+            Output::send<RC::LogLevel::Normal>(STR("FluxCon Initialized"));
         }
 
         auto on_lua_start(const StringViewType mod_name, LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua,

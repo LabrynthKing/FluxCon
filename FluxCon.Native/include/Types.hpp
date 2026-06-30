@@ -25,6 +25,8 @@ namespace Flux
         Init = 1,
         Register = 2,
         UnRegister = 3,
+        Log = 4,
+        LogEx = 5,
     };
 
     struct MessageHeader

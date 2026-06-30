@@ -24,7 +24,7 @@ public static class Program
 {
     private const string Version = "0.0.1.4";
 
-    public static VLog Logger = null!;
+    internal static VLog Logger = null!;
 
     private static ModHandler _modHandler = new();
 
@@ -107,6 +107,13 @@ public static class Program
         pipeHandler.OnRegister += registration => { _modHandler.RegisterMod(registration.ModInfo); };
 
         pipeHandler.OnUnRegister += unregister => { _modHandler.UnRegisterMod(unregister.ModId); };
+
+        pipeHandler.OnLog += log => { LogHandler.HandleLog(_modHandler, log.ModId, log.Level, log.Message); };
+
+        pipeHandler.OnLogEx += log =>
+        {
+            LogHandler.HandleLogEx(_modHandler, log.ModId, log.Level, log.Message, log.Ex);
+        };
 
         pipeHandler.OnError += exception => { Logger.Error(exception, "Pipe Listener Error"); };
     }

@@ -16,8 +16,12 @@
 
 namespace FluxCon.Types;
 
-public record Init;
+internal record Init;
 
-public record ModRegistration(ModInfo ModInfo);
+internal record ModRegistration(ModInfo ModInfo);
 
-public record ModUnRegistration(uint ModId);
+internal record ModUnRegistration(uint ModId);
+
+internal record Log(uint ModId, LogLevel Level, string Message);
+
+internal record LogEx(uint ModId, LogLevel Level, string Message, FluxEx Ex);

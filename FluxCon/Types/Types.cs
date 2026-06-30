@@ -22,11 +22,13 @@ internal enum MessageType : uint
 {
     Init = 1,
     Register = 2,
-    UnRegister = 3
+    UnRegister = 3,
+    Log = 4,
+    LogEx = 5
 }
 
 [Flags]
-public enum ModType : uint
+internal enum ModType : uint
 {
     None = 0,
     Lua = 1 << 0,
@@ -49,9 +51,34 @@ internal enum EnabledInfo : uint
     Auto
 }
 
+internal enum LogLevel : uint
+{
+    Info,
+    Debug,
+    Verbose,
+    Warning,
+    Error,
+    Fatal
+}
+
+internal enum FluxEx : uint
+{
+    None,
+    UnknownRuntimeError,
+    Timeout,
+    InvalidCast,
+    KeyNotFound,
+    PathNotFound,
+    NullReference,
+    InvalidArgument,
+    IndexOutOfBounds,
+    InvalidOperation,
+    ApiVersionMismatch
+}
+
 internal readonly record struct ModInfoSimple(string Name, ModType Type, EnabledInfo EnabledInfo, uint? LoadOrder);
 
-public struct ModInfo(string name, string displayName, ModType type, string author, string version)
+internal struct ModInfo(string name, string displayName, ModType type, string author, string version)
 {
     // Use Hash For ModID, Why? IDK I Just Wanna
     public readonly uint ModId = HashUtils.GetFNV1aHash(name);

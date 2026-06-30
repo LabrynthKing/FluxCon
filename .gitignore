@@ -1233,6 +1233,7 @@ FodyWeavers.xsd
 # Extra
 .idea/
 FluxCon.Native/cmake_shipping/
+FluxCon.Lua/.vscode/
 
 # End of https://www.toptal.com/developers/gitignore/api/cmake,c++,csharp,rider,clion
 
